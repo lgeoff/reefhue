@@ -1,0 +1,7 @@
+engine/target/
+tests/out/
+tests/shots/
+web/_clips/
+node_modules/
+__pycache__/
+_site/

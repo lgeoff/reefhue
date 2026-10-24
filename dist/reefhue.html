@@ -1,0 +1,3700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Reefhue</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: header bar · [viewer + readout | inspector]; stacks to one column on phones.
+   Deliberately a single neutral-dark theme: a colour-grading tool must not tint
+   the viewer's perception, so greys are true neutrals and the only hue is the
+   red that water takes away first. */
+:root {
+  --ground: #141515;
+  --panel: #1c1d1e;
+  --raise: #27282a;
+  --line: #36383b;
+  --ink: #ecebe8;
+  --muted: #9a9b9e;
+  --red: #ff5d4f;
+  --red-ink: #1d0907;
+  --good: #73cf92;
+  --warn: #f0b443;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "Barlow", "Segoe UI", Roboto, system-ui, sans-serif;
+  --r: 6px;
+  color-scheme: dark;
+}
+
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 14px/1.45 var(--font-body);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--ground); }
+
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+h2 {
+  font: 600 13px/1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- bar */
+.bar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.mark {
+  width: 14px; height: 14px; border-radius: 50%; align-self: center;
+  background: conic-gradient(from 200deg, #3f7fe0, #58c26d, #f2d23a, #f08a2c, var(--red), #3f7fe0);
+}
+.name { font: 600 24px/1 var(--font-display); letter-spacing: 0.02em; }
+.sub { color: var(--muted); font-size: 13px; }
+.file { flex: 1 1 200px; min-width: 0; display: flex; gap: 10px; align-items: baseline; justify-content: center; }
+.file-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-meta { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.actions { display: flex; gap: 8px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  padding: 8px 14px; border-radius: var(--r);
+  border: 1px solid var(--line); background: var(--raise);
+  font-weight: 500; white-space: nowrap;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--red); border-color: var(--red); color: var(--red-ink); font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+.link { background: none; border: 0; padding: 4px 2px; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.link:hover { color: var(--ink); }
+
+/* ---------------------------------------------------------------- app */
+.app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  min-height: 0;
+}
+.viewer { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--line); }
+.toolbar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 8px max(16px, env(safe-area-inset-left, 0px));
+  border-bottom: 1px solid var(--line);
+}
+.hint { color: var(--muted); font-size: 12px; }
+kbd { font: 600 11px var(--font-body); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; }
+.demo-links { margin-left: auto; display: flex; gap: 12px; font-size: 13px; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 5px 12px; cursor: pointer; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--raise); color: var(--ink); }
+
+.stage-wrap {
+  position: relative; flex: 1 1 auto; min-height: 280px;
+  display: grid; place-items: center; overflow: hidden;
+  background:
+    repeating-conic-gradient(var(--panel) 0 25%, var(--ground) 0 50%) 0 0 / 24px 24px;
+}
+.stage { position: relative; touch-action: none; user-select: none; box-shadow: 0 0 0 1px var(--line); }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.stage.view-after #beforeCanvas, .stage.view-before #afterCanvas { visibility: hidden; }
+.stage.view-split { cursor: ew-resize; }
+.handle { position: absolute; top: 0; bottom: 0; width: 0; left: 50%; pointer-events: none; }
+.handle::before { content: ""; position: absolute; top: 0; bottom: 0; left: -1px; width: 2px; background: var(--ink); opacity: 0.85; }
+.handle span {
+  position: absolute; top: 50%; left: -14px; width: 28px; height: 28px; margin-top: -14px;
+  border-radius: 50%; background: var(--ink); box-shadow: 0 1px 6px rgb(0 0 0 / 0.5);
+}
+.handle span::before, .handle span::after {
+  content: ""; position: absolute; top: 9px; border: 5px solid transparent;
+}
+.handle span::before { left: 2px; border-right-color: var(--ground); }
+.handle span::after { right: 2px; border-left-color: var(--ground); }
+.stage:not(.view-split) .handle { display: none; }
+.corner {
+  position: absolute; top: 10px; padding: 2px 8px; border-radius: 3px;
+  background: rgb(0 0 0 / 0.55); color: #fff;
+  font: 600 12px/1.5 var(--font-display); letter-spacing: 0.1em; text-transform: uppercase;
+  pointer-events: none;
+}
+.corner-l { left: 10px; }
+.corner-r { right: 10px; }
+.stage.view-after .corner-l, .stage.view-before .corner-r { display: none; }
+.stage.view-before .corner-l { left: 10px; }
+
+.drop, .busy {
+  position: absolute; inset: 12px; display: grid; place-items: center;
+  border-radius: 10px; z-index: 3;
+}
+.drop { border: 2px dashed var(--red); background: rgb(20 21 21 / 0.86); font: 600 28px var(--font-display); text-align: center; }
+.drop small { display: block; font: 400 13px var(--font-body); color: var(--muted); margin-top: 6px; }
+.busy { background: rgb(20 21 21 / 0.6); }
+.busy-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; display: grid; gap: 10px; min-width: min(280px, 80vw); }
+.meter { height: 6px; border-radius: 3px; background: var(--raise); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0%; background: var(--red); transition: width 0.15s; }
+
+/* ---------------------------------------------------------------- transport */
+.transport {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px max(16px, env(safe-area-inset-left, 0px));
+  border-top: 1px solid var(--line);
+}
+.transport input[type=range] { flex: 1; min-width: 60px; }
+.icon { width: 34px; height: 30px; border-radius: var(--r); border: 1px solid var(--line); background: var(--raise); cursor: pointer; }
+.icon.small { width: 26px; }
+.time { font: 500 15px var(--font-display); font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.chip { white-space: nowrap; border: 1px solid var(--line); background: transparent; border-radius: 99px; padding: 3px 10px; font-size: 12px; cursor: pointer; color: var(--muted); }
+.chip[aria-pressed="false"] { color: var(--ink); border-color: var(--muted); }
+
+/* ---------------------------------------------------------------- readout */
+.readout {
+  display: grid; gap: 16px; align-items: start;
+  grid-template-columns: 140px minmax(0, 1.2fr) minmax(0, 1fr);
+  padding-block: 12px 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: 16px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+.readout figure { margin: 0; min-width: 0; }
+.readout canvas { width: 100%; height: auto; display: block; }
+.cast canvas { max-width: 140px; aspect-ratio: 1; }
+figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.legend { display: block; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin: 0 3px 0 6px; }
+.dot.hollow { background: transparent; border: 1.5px solid var(--ink); margin-left: 0; }
+.metrics { min-width: 0; display: grid; gap: 8px; }
+.verdict { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pill { font: 600 12px/1 var(--font-display); letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 8px; border-radius: 99px; background: var(--raise); }
+.pill.good { background: var(--good); color: #0b1a10; }
+.pill.warn { background: var(--warn); color: #241904; }
+.pill.bad { background: var(--red); color: var(--red-ink); }
+.vtext { color: var(--muted); font-size: 12px; }
+.metrics table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.metrics th { text-align: right; font: 600 11px var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 0 0 4px; }
+.metrics th:first-child, .metrics td:first-child { text-align: left; }
+.metrics td { text-align: right; padding: 3px 0; border-top: 1px solid var(--line); }
+.metrics td:first-child { color: var(--muted); }
+.metrics td.up { color: var(--good); }
+.metrics td.down { color: var(--warn); }
+.metrics td abbr { text-decoration: none; cursor: help; border-bottom: 1px dotted var(--muted); }
+
+/* ---------------------------------------------------------------- inspector */
+.inspector { overflow-y: auto; min-height: 0; background: var(--panel); }
+.panel {
+  padding-block: 14px;
+  padding-left: 16px;
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--line);
+  display: grid; gap: 10px;
+}
+.presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.preset {
+  text-align: left; cursor: pointer; padding: 7px 10px; border-radius: var(--r);
+  border: 1px solid var(--line); background: var(--raise); display: grid; gap: 1px;
+}
+.preset b { font: 600 16px/1.1 var(--font-display); letter-spacing: 0.02em; }
+.preset small { color: var(--muted); font-size: 11.5px; }
+.preset[aria-pressed="true"] { border-color: var(--red); box-shadow: inset 0 0 0 1px var(--red); }
+.preset.modified[aria-pressed="true"] b::after { content: " · edited"; color: var(--muted); font: 400 12px var(--font-body); }
+
+.absorb { display: grid; gap: 4px; }
+.absorb-bar { display: grid; gap: 3px; }
+.absorb-bar i { display: block; height: 3px; width: var(--l); background: var(--c); border-radius: 2px; }
+.absorb-scale { display: flex; justify-content: space-between; font: 500 12px var(--font-display); color: var(--muted); font-variant-numeric: tabular-nums; }
+.absorb-scale span:nth-child(2) { margin-left: 4%; }
+.absorb-scale span:nth-child(3) { margin-left: 4%; }
+.absorb p { margin: 0; font-size: 12px; color: var(--muted); }
+
+.auto-grid { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.auto-grid div { display: grid; gap: 2px; }
+.auto-grid dt { font-size: 11.5px; color: var(--muted); }
+.auto-grid dd { margin: 0; font: 600 18px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted); cursor: pointer; }
+.check input { margin-top: 2px; accent-color: var(--red); }
+
+.group { padding-block: 12px 14px; padding-left: 16px; padding-right: max(16px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.slider { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.slider label { font-size: 13px; }
+.slider output { font: 500 15px var(--font-display); font-variant-numeric: tabular-nums; color: var(--muted); min-width: 4ch; text-align: right; }
+.slider output.changed { color: var(--ink); }
+.slider input { grid-column: 1 / -1; width: 100%; accent-color: var(--red); margin: 0; height: 18px; }
+.slider .tip { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); margin-top: -2px; }
+.foot { border-bottom: 0; justify-items: start; }
+.sub-h { margin-top: 4px; }
+.btn.small { padding: 5px 10px; font-size: 12.5px; }
+
+/* ---------------------------------------------------------------- batch queue */
+.app.has-queue { grid-template-columns: 264px minmax(0, 1fr) 340px; }
+.queue {
+  display: flex; flex-direction: column; min-height: 0;
+  background: var(--panel); border-right: 1px solid var(--line);
+}
+.q-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding-block: 12px 8px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 12px;
+}
+.q-count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.q-list { list-style: none; margin: 0; padding: 0 8px 8px; overflow-y: auto; flex: 1 1 auto; display: grid; gap: 4px; align-content: start; }
+.q-item { position: relative; }
+.q-main {
+  width: 100%; display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 2px 10px;
+  text-align: left; cursor: pointer; padding: 6px 30px 8px 6px;
+  border: 1px solid transparent; border-radius: var(--r); background: transparent; position: relative; overflow: hidden;
+}
+.q-main:hover { background: var(--raise); }
+.q-item[aria-current="true"] .q-main { background: var(--raise); border-color: var(--muted); }
+.q-thumb {
+  grid-row: span 3; width: 56px; height: 42px; border-radius: 4px; object-fit: cover; background: var(--ground);
+  align-self: center;
+}
+.q-name { font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.q-meta { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-line { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.q-chip {
+  font: 600 11px/1 var(--font-display); letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 6px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
+}
+.q-chip.custom { border-color: var(--red); color: var(--ink); }
+.q-state { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-item[data-status="done"] .q-state { color: var(--good); }
+.q-item[data-status="error"] .q-state { color: var(--red); }
+.q-item[data-status="stale"] .q-state { color: var(--warn); }
+.q-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: var(--p, 0%); background: var(--red); transition: width 0.2s; }
+.q-item[data-status="done"] .q-bar { background: var(--good); width: 100%; }
+.q-x, .q-dl {
+  position: absolute; right: 4px; width: 24px; height: 24px; border-radius: 50%;
+  border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1;
+}
+.q-x { top: 4px; }
+.q-dl { bottom: 6px; }
+.q-x:hover, .q-dl:hover { background: var(--ground); color: var(--ink); }
+.q-foot {
+  border-top: 1px solid var(--line); display: grid; gap: 8px;
+  padding-block: 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 12px;
+}
+.q-buttons { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.q-buttons .btn { justify-content: center; }
+.q-status { margin: 0; font-size: 12px; color: var(--muted); }
+.field.small { font-size: 12px; gap: 4px; }
+.field.small select { padding: 6px; }
+.this-file { gap: 8px; }
+.tf-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tf-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.speed-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+.speed-table th { text-align: left; font: 600 11px var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 0 0 4px; }
+.speed-table td { padding: 6px 0; border-top: 1px solid var(--line); }
+.speed-table td + td, .speed-table th + th { text-align: right; }
+.speed-table small { display: block; color: var(--muted); font-size: 11.5px; }
+
+/* ---------------------------------------------------------------- sheet & toast */
+.sheet-backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 0.6); display: grid; place-items: center; z-index: 20; padding: 16px; }
+.sheet { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; width: min(440px, 100%); display: grid; gap: 14px; }
+.sheet h2 { font-size: 20px; color: var(--ink); letter-spacing: 0.02em; text-transform: none; }
+.field { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.field select { background: var(--raise); border: 1px solid var(--line); border-radius: var(--r); padding: 8px; }
+.note { margin: 0; font-size: 12.5px; color: var(--muted); }
+.progress { display: grid; gap: 6px; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.err { margin: 0; color: var(--red); font-size: 13px; }
+.sheet-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  background: var(--raise); border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 14px; z-index: 30; max-width: calc(100% - 32px); font-size: 13px;
+}
+
+/* ---------------------------------------------------------------- narrow */
+@media (max-width: 900px) {
+  body { display: block; height: auto; }
+  .app, .app.has-queue { grid-template-columns: minmax(0, 1fr); }
+  .queue { border-right: 0; border-bottom: 1px solid var(--line); }
+  .q-list { max-height: 38vh; }
+  .viewer { border-right: 0; }
+  .stage-wrap { min-height: 0; height: 56vh; }
+  .transport { flex-wrap: wrap; }
+  .transport input[type=range] { flex-basis: 100%; order: 5; }
+  .readout { grid-template-columns: 110px minmax(0, 1fr); }
+  .readout .metrics { grid-column: 1 / -1; }
+  .inspector { overflow: visible; }
+  .sub, .hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .meter i { transition: none; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="name">Reefhue</span>
+    <span class="sub">Underwater colour restore · runs on your machine</span>
+  </div>
+  <div class="file" aria-live="polite">
+    <span id="fileName" class="file-name">Loading engine…</span>
+    <span id="fileMeta" class="file-meta"></span>
+  </div>
+  <div class="actions">
+    <label class="btn" for="fileInput">Add photos or videos</label>
+    <input type="file" id="fileInput" accept="image/*,video/*,.mov,.mp4,.m4v" multiple hidden>
+    <button type="button" id="exportBtn" class="btn primary" disabled>Download</button>
+  </div>
+</header>
+
+<main class="app" id="app">
+  <aside class="queue" id="queue" aria-label="Batch queue" hidden>
+    <div class="q-head">
+      <h2>Batch</h2>
+      <span class="q-count" id="qCount"></span>
+    </div>
+    <ol class="q-list" id="qList"></ol>
+    <div class="q-foot">
+      <label class="field small" for="qOutput">Output
+        <select id="qOutput">
+          <option value="mp4:0">MP4 · original size</option>
+          <option value="mp4:2160">MP4 · up to 4K</option>
+          <option value="mp4:1080">MP4 · up to 1080p</option>
+          <option value="mp4:720">MP4 · up to 720p</option>
+          <option value="webm:0">WebM · original size</option>
+        </select>
+      </label>
+      <div class="q-buttons">
+        <button type="button" id="qProcess" class="btn primary">Process all</button>
+        <button type="button" id="qZip" class="btn" disabled>Download all (.zip)</button>
+      </div>
+      <p class="q-status" id="qStatus" aria-live="polite"></p>
+    </div>
+  </aside>
+
+  <section class="viewer" aria-label="Preview">
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Compare">
+        <button type="button" id="viewSplit" class="on" aria-pressed="true">Split</button>
+        <button type="button" id="viewAfter" aria-pressed="false">After</button>
+        <button type="button" id="viewBefore" aria-pressed="false">Before</button>
+      </div>
+      <span class="hint">Hold <kbd>B</kbd> to see the original · drag the divider</span>
+      <div class="demo-links">
+        <button type="button" id="demoPhotoBtn" class="link">Demo photo</button>
+        <button type="button" id="demoClipBtn" class="link">Demo clip</button>
+      </div>
+    </div>
+
+    <div class="stage-wrap" id="stageWrap">
+      <div class="stage" id="stage">
+        <canvas id="beforeCanvas" aria-label="Original"></canvas>
+        <canvas id="afterCanvas" aria-label="Restored"></canvas>
+        <div class="handle" id="handle"><span></span></div>
+        <span class="corner corner-l">Before</span>
+        <span class="corner corner-r">After</span>
+      </div>
+      <div class="drop" id="drop" hidden><div>Drop to add<small>One file opens it · several make a batch · JPEG · PNG · WebP · MP4 · MOV · WebM</small></div></div>
+      <div class="busy" id="busy" hidden><div class="busy-card"><span id="busyText">Working…</span><div class="meter"><i id="busyBar"></i></div></div></div>
+    </div>
+
+    <div class="transport" id="transport" hidden>
+      <button type="button" id="playBtn" class="icon" aria-label="Play">▶</button>
+      <button type="button" id="stepBack" class="icon small" aria-label="Previous frame">‹</button>
+      <button type="button" id="stepFwd" class="icon small" aria-label="Next frame">›</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="Position">
+      <span class="time" id="timeLabel">0:00.0 / 0:00.0</span>
+      <button type="button" id="muteBtn" class="chip" aria-pressed="true">Sound off</button>
+    </div>
+
+    <div class="readout" id="readout">
+      <figure class="cast">
+        <canvas id="castPlot" width="220" height="220" aria-label="Colour cast on the a*b* plane"></canvas>
+        <figcaption>Highlight cast on a*b* <span class="legend"><i class="dot hollow"></i>before <i class="dot"></i>after</span></figcaption>
+      </figure>
+      <figure class="hists">
+        <canvas id="histPlot" width="520" height="150" aria-label="RGB histograms before and after"></canvas>
+        <figcaption>RGB histogram · top before, bottom after</figcaption>
+      </figure>
+      <div class="metrics">
+        <div class="verdict" id="verdict"><span class="pill">—</span><span class="vtext"></span></div>
+        <table>
+          <thead><tr><th scope="col">Measure</th><th scope="col">Before</th><th scope="col">After</th></tr></thead>
+          <tbody id="metricRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <aside class="inspector" aria-label="Adjustments">
+    <section class="panel this-file" id="thisFile" hidden>
+      <div class="tf-row">
+        <h2>Settings for this file</h2>
+        <span class="q-chip" id="tfChip">Auto</span>
+      </div>
+      <div class="tf-actions">
+        <button type="button" id="tfAuto" class="btn ghost small">Back to Auto</button>
+        <button type="button" id="tfAll" class="btn ghost small">Use for all files</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Preset</h2>
+      <div class="presets" id="presets"></div>
+      <h2 class="sub-h">Looks</h2>
+      <div class="presets" id="looks"></div>
+      <div class="absorb" aria-hidden="true">
+        <div class="absorb-bar">
+          <i style="--c:#e8473c;--l:16.7%"></i>
+          <i style="--c:#f08a2c;--l:33.3%"></i>
+          <i style="--c:#f2d23a;--l:66.7%"></i>
+          <i style="--c:#58c26d;--l:88%"></i>
+          <i style="--c:#3f7fe0;--l:100%"></i>
+        </div>
+        <div class="absorb-scale"><span>0 m</span><span>5</span><span>10</span><span>20</span><span>30 m</span></div>
+        <p>Red (650 nm) is gone by ~5 m, orange by ~10 m, yellow by ~20 m.</p>
+      </div>
+    </section>
+
+    <section class="panel auto">
+      <h2>Detected</h2>
+      <dl class="auto-grid">
+        <div><dt>Water</dt><dd id="autoWater">—</dd></div>
+        <div><dt>Red left</dt><dd id="autoRed">—</dd></div>
+        <div><dt>Red lift</dt><dd id="autoGain">—</dd></div>
+      </dl>
+      <label class="check" id="lockRow" hidden><input type="checkbox" id="lockAuto"> Keep this frame's correction for the whole clip</label>
+    </section>
+
+    <div id="sliders"></div>
+
+    <div class="panel foot">
+      <button type="button" id="resetBtn" class="btn ghost">Reset to preset</button>
+      <button type="button" id="speedBtn" class="link">Test export speed on this device</button>
+    </div>
+  </aside>
+</main>
+
+<div class="sheet-backdrop" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">Download</h2>
+    <div id="sheetImage">
+      <label class="field" for="imgFormat">Format
+        <select id="imgFormat"><option value="jpeg">JPEG (quality 95)</option><option value="png">PNG (lossless)</option><option value="webp">WebP (quality 95)</option></select>
+      </label>
+      <p class="note" id="imgNote"></p>
+    </div>
+    <div id="sheetVideo">
+      <label class="field" for="vidRes">Resolution
+        <select id="vidRes"></select>
+      </label>
+      <label class="field" for="vidFormat">Format
+        <select id="vidFormat"><option value="mp4">MP4 (H.264 or HEVC, original sound kept)</option><option value="webm">WebM (VP9, Opus sound)</option></select>
+      </label>
+      <p class="note" id="vidNote"></p>
+    </div>
+    <div class="progress" id="exportProgress" hidden>
+      <div class="meter"><i id="exportBar"></i></div>
+      <span id="exportText"></span>
+    </div>
+    <p class="err" id="exportErr" hidden></p>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="sheetCancel">Cancel</button>
+      <button type="button" class="btn primary" id="sheetGo">Process and download</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="speed" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="speedTitle">
+    <h2 id="speedTitle">Export speed on this device</h2>
+    <p class="note">Renders a 4-second 1080p test clip, then exports it three ways. Takes about a minute.</p>
+    <table class="speed-table">
+      <thead><tr><th scope="col">Method</th><th scope="col">Frames/s</th><th scope="col">Time</th></tr></thead>
+      <tbody id="speedRows"></tbody>
+    </table>
+    <p class="note" id="speedNote"></p>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="speedClose">Close</button>
+      <button type="button" class="btn primary" id="speedGo">Run test</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<video id="video" playsinline muted preload="auto" hidden></video>
+
+<script>window.REEFHUE_WASM_B64 = "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";</script>
+<script type="module">
+const __m_engine = (() => {
+// Thin JS wrapper around engine.wasm (Rust, no_std). Works in browsers, workers and Node.
+// The page owns memory: buffers are placed above __heap_base and memory grows on demand.
+
+const NPARAMS = 40;
+const METRICS_LEN = 16 + 768;
+const GPU_LEN = 32;
+const TONE_N = 2048;
+const THUMB_BYTES = 256 * 256 * 4;
+
+// Settings-vector slots, mirrored from engine/src/lib.rs
+const S = {
+  STRENGTH: 0, KRED: 1, DONOR_G: 2, KBLUE: 3, GAIN: 4, BLACK: 7, WHITE: 10,
+  DEHAZE: 13, EXPOSURE: 14, CONTRAST: 15, SHADOWS: 16, HIGHLIGHTS: 17,
+  SATURATION: 18, VIBRANCE: 19, CLARITY: 20, WATER_SAT: 21, TEMP: 22, TINT: 23,
+  MEAN: 24, GREEN_WATER: 27, OUT_LUMA: 28, VEIL_REF: 29, WATER_HUE: 31, WATER_LUM: 32,
+};
+
+// Slots produced by analyze() that video smoothing should average over time.
+const AUTO_SLOTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 29];
+
+class Engine {
+  static async load(source) {
+    let bytes = source;
+    if (typeof source === 'string' || source instanceof URL) {
+      bytes = await (await fetch(source)).arrayBuffer();
+    }
+    const { instance } = await WebAssembly.instantiate(bytes, {});
+    return new Engine(instance);
+  }
+
+  constructor(instance) {
+    this.x = instance.exports;
+    if (this.x.layout_version() !== NPARAMS * 1000 + METRICS_LEN) {
+      throw new Error('engine.wasm does not match engine.js (rebuild the engine)');
+    }
+    this.mem = this.x.memory;
+    const base = (this.x.__heap_base.value + 15) & ~15;
+    this.pParams = base; // NPARAMS f32
+    this.pGpu = base + 256; // GPU_LEN f32
+    this.pOut = base + 512; // METRICS_LEN f32
+    this.pT = (this.pOut + METRICS_LEN * 4 + 255) & ~255; // thumbnail (<=256x256)
+    this.pA = this.pT + THUMB_BYTES; // image buffer A
+    this.capacity = 0; // bytes per image buffer
+    this._reserve(1 << 20);
+  }
+
+  _reserve(bytes) {
+    if (bytes <= this.capacity) return;
+    const cap = Math.ceil(bytes / 65536) * 65536;
+    const end = this.pA + cap * 2;
+    const have = this.mem.buffer.byteLength;
+    if (end > have) this.mem.grow(Math.ceil((end - have) / 65536));
+    this.capacity = cap;
+    this.pB = this.pA + cap;
+  }
+
+  get u8() { return new Uint8Array(this.mem.buffer); }
+  get f32() { return new Float32Array(this.mem.buffer); }
+
+  /** Auto-correction estimate for an RGBA buffer (ideally a <=256 px thumbnail). */
+  analyze(rgba, w, h, alpha = 1, wb = 1) {
+    this._reserve(rgba.length);
+    this.u8.set(rgba, this.pA);
+    this.x.analyze(this.pA, w, h, alpha, wb, this.pParams);
+    return this.f32.slice(this.pParams / 4, this.pParams / 4 + NPARAMS);
+  }
+
+  /** prepare() + clarity grid from the thumbnail (or from the image itself). */
+  _prepare(settings, thumb, tw, th) {
+    this.f32.set(settings, this.pParams / 4);
+    this.x.prepare(this.pParams);
+    if (thumb) {
+      if (thumb.length > THUMB_BYTES) throw new Error('thumbnail larger than 256x256');
+      this.u8.set(thumb, this.pT);
+      this.x.build_grid(this.pT, tw, th);
+    }
+  }
+
+  /**
+   * Apply a full settings vector. Returns a Uint8ClampedArray (or fills `out`).
+   * Pass the analysis thumbnail so clarity uses the same grid as the GPU path.
+   */
+  process(rgba, w, h, settings, out, thumb, tw, th) {
+    const n = w * h * 4;
+    this._reserve(n);
+    this._prepare(settings, thumb, tw, th);
+    this.u8.set(rgba, this.pA);
+    this.x.process(this.pA, this.pB, w, h);
+    const res = out || new Uint8ClampedArray(n);
+    res.set(this.u8.subarray(this.pB, this.pB + n));
+    return res;
+  }
+
+  /**
+   * Everything the WebGL renderer needs for one frame: derived constants,
+   * the tone curve and the clarity grid, all computed by the Rust engine.
+   */
+  gpuFrame(settings, thumb, tw, th) {
+    this._prepare(settings, thumb, tw, th);
+    this.x.gpu_params(this.pGpu);
+    const f = this.f32;
+    const params = f.slice(this.pGpu / 4, this.pGpu / 4 + GPU_LEN);
+    const tp = this.x.tone_lut() / 4;
+    const gp = this.x.grid_data() / 4;
+    const gw = params[25], gh = params[26];
+    return { params, tone: f.slice(tp, tp + TONE_N), grid: f.slice(gp, gp + gw * gh), gw, gh };
+  }
+
+  /** Quality metrics; samples ~`samples` pixels. */
+  metrics(rgba, w, h, samples = 120000) {
+    const n = w * h;
+    this._reserve(rgba.length);
+    this.u8.set(rgba, this.pA);
+    const step = Math.max(1, Math.floor(n / samples)) | 1; // odd: avoid sampling one column
+    this.x.metrics(this.pA, w, h, step, this.pOut);
+    const o = this.f32.slice(this.pOut / 4, this.pOut / 4 + METRICS_LEN);
+    return {
+      meanL: o[0], stdL: o[1], a: o[2], b: o[3], cast: o[4], colorfulness: o[5],
+      uciqe: o[6], clipped: o[7], saturation: o[8], stdChroma: o[9], rangeL: o[10],
+      frameA: o[14], frameB: o[15],
+      mean: [o[11], o[12], o[13]], hist: o.slice(16, 16 + 768),
+    };
+  }
+}
+
+/**
+ * Merge the automatic estimate with the user's slider values into the
+ * settings vector consumed by `process`. Slider values use UI units.
+ */
+function buildSettings(auto, u) {
+  const s = new Float32Array(NPARAMS);
+  s.set(auto);
+  s[S.STRENGTH] = u.strength / 100;
+  s[S.DEHAZE] = u.dehaze / 100;
+  s[S.EXPOSURE] = u.exposure;
+  s[S.CONTRAST] = u.contrast / 100;
+  s[S.SHADOWS] = u.shadows / 100;
+  s[S.HIGHLIGHTS] = u.highlights / 100;
+  s[S.SATURATION] = u.saturation / 100;
+  s[S.VIBRANCE] = u.vibrance / 100;
+  s[S.CLARITY] = u.clarity / 100;
+  s[S.WATER_SAT] = u.water / 100;
+  s[S.TEMP] = u.temp / 100;
+  s[S.TINT] = u.tint / 100;
+  s[S.WATER_HUE] = (u.waterHue ?? 0) / 100;
+  s[S.WATER_LUM] = (u.waterLum ?? 0) / 100;
+  return s;
+}
+
+/**
+ * Temporal smoothing of the auto estimate for video (time constant `tau` s).
+ * `state` = {smooth, lastT}; returns the smoothed vector.
+ */
+function smoothAuto(raw, t, state, tau = 0.7) {
+  if (state.smooth && state.lastT != null) {
+    const dt = Math.abs(t - state.lastT);
+    if (dt > 0 && dt < 1) {
+      const a = 1 - Math.exp(-dt / tau);
+      const next = raw.slice();
+      for (const k of AUTO_SLOTS) next[k] = state.smooth[k] + a * (raw[k] - state.smooth[k]);
+      state.smooth = next;
+    } else if (dt >= 1) state.smooth = raw;
+  } else state.smooth = raw;
+  state.lastT = t;
+  return state.smooth;
+}
+
+/** Slider defaults and presets (UI units). `red` and `balance` feed analyze(). */
+const DEFAULTS = {
+  strength: 100, red: 100, balance: 100, dehaze: 100, exposure: 0, contrast: 10,
+  shadows: 10, highlights: -10, saturation: 10, vibrance: 20, clarity: 20, water: 0,
+  temp: 0, tint: 0, waterHue: 0, waterLum: 0,
+};
+
+const PRESETS = {
+  auto: { label: 'Auto', note: 'Balanced restore', ...DEFAULTS },
+  shallow: {
+    label: 'Shallow', note: '0–5 m', ...DEFAULTS,
+    red: 60, balance: 85, dehaze: 80, contrast: 5, vibrance: 15, clarity: 10, water: 10,
+  },
+  mid: {
+    label: 'Mid', note: '5–15 m', ...DEFAULTS,
+    red: 110, dehaze: 100, contrast: 12, saturation: 12, vibrance: 22, clarity: 25,
+  },
+  deep: {
+    label: 'Deep', note: '15 m +', ...DEFAULTS,
+    red: 150, balance: 110, dehaze: 110, exposure: 0.2, contrast: 15, shadows: 20,
+    saturation: 15, vibrance: 25, clarity: 30, water: -20,
+  },
+  green: {
+    label: 'Green water', note: 'Lakes, quarries, coast', ...DEFAULTS,
+    red: 120, balance: 110, dehaze: 120, contrast: 15, clarity: 30, water: -10, tint: 15,
+  },
+  natural: {
+    label: 'Natural', note: 'Keep some blue', ...DEFAULTS,
+    strength: 80, red: 80, dehaze: 70, contrast: 0, saturation: 0, vibrance: 10, clarity: 10,
+  },
+  vivid: {
+    label: 'Vivid', note: 'Punchy reef colour', ...DEFAULTS,
+    contrast: 25, saturation: 25, vibrance: 35, clarity: 45, shadows: 15,
+  },
+  // Looks: slider settings found by fitting Reefhue to graded examples
+  // (tests/preset-benchmark). They are styles, not neutral restoration.
+  teal: {
+    label: 'Teal matte', note: 'Faded, cool grade', look: true, ...DEFAULTS,
+    strength: 76, red: 140, balance: 109, dehaze: 77, exposure: 0, contrast: -22, shadows: 52,
+    highlights: 6, temp: -22, tint: 95, saturation: -63, vibrance: -58, water: 83, clarity: 60,
+    waterHue: -8, waterLum: 20,
+  },
+  moody: {
+    label: 'Moody blue', note: 'Dark water, clean skin', look: true, ...DEFAULTS,
+    strength: 98, red: 184, balance: 27, dehaze: 58, exposure: -0.25, contrast: -4, shadows: -2,
+    highlights: -100, temp: -6, tint: 69, saturation: -48, vibrance: -12, water: 100, clarity: 55,
+    waterHue: 80, waterLum: -62,
+  },
+  airy: {
+    label: 'Tropical light', note: 'Bright, airy shallows', look: true, ...DEFAULTS,
+    strength: 70, red: 3, balance: 131, dehaze: 53, exposure: 0, contrast: 30, shadows: 10,
+    highlights: -97, temp: 13, tint: 3, saturation: -52, vibrance: 71, water: -65, clarity: 5,
+    waterHue: 84, waterLum: 41,
+  },
+};
+
+return { NPARAMS, METRICS_LEN, GPU_LEN, TONE_N, S, AUTO_SLOTS, Engine, buildSettings, smoothAuto, DEFAULTS, PRESETS };
+})();
+const __m_webm = (() => {
+// Minimal WebM (Matroska) writer for WebCodecs output: one video track
+// (VP8/VP9) and an optional Opus audio track. Builds the whole file at the
+// end, with Duration and Cues so players can seek. No dependencies.
+
+const ID = {
+  EBML: 0x1a45dfa3, EBMLVersion: 0x4286, EBMLReadVersion: 0x42f7, EBMLMaxIDLength: 0x42f2,
+  EBMLMaxSizeLength: 0x42f3, DocType: 0x4282, DocTypeVersion: 0x4287, DocTypeReadVersion: 0x4285,
+  Segment: 0x18538067, Info: 0x1549a966, TimecodeScale: 0x2ad7b1, Duration: 0x4489,
+  MuxingApp: 0x4d80, WritingApp: 0x5741, Tracks: 0x1654ae6b, TrackEntry: 0xae,
+  TrackNumber: 0xd7, TrackUID: 0x73c5, TrackType: 0x83, FlagLacing: 0x9c, CodecID: 0x86,
+  CodecPrivate: 0x63a2, CodecDelay: 0x56aa, SeekPreRoll: 0x56bb, Video: 0xe0, PixelWidth: 0xb0,
+  PixelHeight: 0xba, Audio: 0xe1, SamplingFrequency: 0xb5, Channels: 0x9f, Cues: 0x1c53bb6b,
+  CuePoint: 0xbb, CueTime: 0xb3, CueTrackPositions: 0xb7, CueTrack: 0xf7,
+  CueClusterPosition: 0xf1, Cluster: 0x1f43b675, Timecode: 0xe7, SimpleBlock: 0xa3,
+};
+
+const te = new TextEncoder();
+
+// A node is { parts: Uint8Array[], size }. Large frame payloads are never copied.
+function node(parts) {
+  let size = 0;
+  for (const p of parts) size += p.size ?? p.length;
+  return { parts, size };
+}
+function idBytes(id) {
+  const out = [];
+  while (id > 0) { out.unshift(id & 0xff); id = Math.floor(id / 256); }
+  return Uint8Array.from(out);
+}
+function vint(n) {
+  for (let len = 1; len <= 8; len++) {
+    if (n < 2 ** (7 * len) - 1) {
+      const b = new Uint8Array(len);
+      let v = n;
+      for (let i = len - 1; i >= 0; i--) { b[i] = v % 256; v = Math.floor(v / 256); }
+      b[0] |= 1 << (8 - len);
+      return b;
+    }
+  }
+  throw new Error('element too large');
+}
+function uint(n, width = 0) {
+  const out = [];
+  while (n > 0) { out.unshift(n % 256); n = Math.floor(n / 256); }
+  while (out.length < Math.max(width, 1)) out.unshift(0);
+  return Uint8Array.from(out);
+}
+function el(id, ...children) {
+  const body = node(children);
+  return node([idBytes(id), vint(body.size), body]);
+}
+const U = (id, n, width) => el(id, uint(n, width));
+const S = (id, s) => el(id, te.encode(s));
+function F(id, x) {
+  const b = new Uint8Array(8);
+  new DataView(b.buffer).setFloat64(0, x);
+  return el(id, b);
+}
+function flatten(n, out) {
+  for (const p of n.parts) {
+    if (p instanceof Uint8Array) out.push(p);
+    else flatten(p, out);
+  }
+  return out;
+}
+
+function opusHead(channels, preSkip, sampleRate) {
+  const b = new Uint8Array(19);
+  b.set(te.encode('OpusHead'), 0);
+  const v = new DataView(b.buffer);
+  b[8] = 1; b[9] = channels;
+  v.setUint16(10, preSkip, true);
+  v.setUint32(12, sampleRate, true);
+  v.setInt16(16, 0, true); b[18] = 0;
+  return b;
+}
+
+class WebMWriter {
+  /**
+   * @param {{width:number,height:number,codec:'V_VP9'|'V_VP8',
+   *          audio?:{sampleRate:number,channels:number,description?:ArrayBuffer}}} o
+   */
+  constructor(o) {
+    this.o = o;
+    this.blocks = []; // {track, ms, key, data}
+  }
+  addVideo(chunk) {
+    const data = new Uint8Array(chunk.byteLength);
+    chunk.copyTo(data);
+    this.blocks.push({ track: 1, ms: Math.round(chunk.timestamp / 1000), key: chunk.type === 'key', data });
+  }
+  addAudio(chunk, meta) {
+    if (meta?.decoderConfig?.description && this.o.audio && !this.o.audio.description) {
+      this.o.audio.description = meta.decoderConfig.description;
+    }
+    const data = new Uint8Array(chunk.byteLength);
+    chunk.copyTo(data);
+    this.blocks.push({ track: 2, ms: Math.round(chunk.timestamp / 1000), key: true, data });
+  }
+
+  finalize(durationMs) {
+    const { width, height, codec, audio } = this.o;
+    const hasAudio = !!audio && this.blocks.some((b) => b.track === 2);
+    const header = el(ID.EBML,
+      U(ID.EBMLVersion, 1), U(ID.EBMLReadVersion, 1), U(ID.EBMLMaxIDLength, 4),
+      U(ID.EBMLMaxSizeLength, 8), S(ID.DocType, 'webm'), U(ID.DocTypeVersion, 4),
+      U(ID.DocTypeReadVersion, 2));
+    const info = el(ID.Info, U(ID.TimecodeScale, 1e6), F(ID.Duration, durationMs),
+      S(ID.MuxingApp, 'Reefhue'), S(ID.WritingApp, 'Reefhue'));
+    const tracks = [el(ID.TrackEntry,
+      U(ID.TrackNumber, 1), U(ID.TrackUID, 1), U(ID.TrackType, 1), U(ID.FlagLacing, 0),
+      S(ID.CodecID, codec), el(ID.Video, U(ID.PixelWidth, width), U(ID.PixelHeight, height)))];
+    if (hasAudio) {
+      const preSkip = 312;
+      let priv = audio.description ? new Uint8Array(audio.description) : null;
+      if (!priv || priv.length < 19) priv = opusHead(audio.channels, preSkip, audio.sampleRate);
+      const realSkip = new DataView(priv.buffer, priv.byteOffset).getUint16(10, true);
+      tracks.push(el(ID.TrackEntry,
+        U(ID.TrackNumber, 2), U(ID.TrackUID, 2), U(ID.TrackType, 2), U(ID.FlagLacing, 0),
+        S(ID.CodecID, 'A_OPUS'), el(ID.CodecPrivate, priv),
+        U(ID.CodecDelay, Math.round((realSkip / 48000) * 1e9)), U(ID.SeekPreRoll, 80e6),
+        el(ID.Audio, F(ID.SamplingFrequency, audio.sampleRate), U(ID.Channels, audio.channels))));
+    }
+    const tracksEl = el(ID.Tracks, ...tracks);
+
+    // Interleave by time; video before audio at equal timestamps.
+    const blocks = this.blocks
+      .filter((b) => b.track === 1 || hasAudio)
+      .sort((a, b) => a.ms - b.ms || a.track - b.track);
+
+    // Group into clusters: start a new one at each video key frame (if the
+    // current cluster is >= 1 s old) or when relative time would overflow int16.
+    const clusters = [];
+    let cur = null;
+    for (const b of blocks) {
+      const tooOld = cur && b.ms - cur.ms > 30000;
+      const keyBreak = cur && b.track === 1 && b.key && b.ms - cur.ms >= 1000;
+      if (!cur || tooOld || keyBreak) {
+        cur = { ms: b.ms, items: [], cue: b.track === 1 && b.key };
+        clusters.push(cur);
+      }
+      cur.items.push(b);
+    }
+    const clusterNodes = clusters.map((c) => {
+      const items = c.items.map((b) => {
+        const head = new Uint8Array(4);
+        head[0] = 0x80 | b.track;
+        new DataView(head.buffer).setInt16(1, b.ms - c.ms);
+        head[3] = b.key ? 0x80 : 0;
+        return el(ID.SimpleBlock, head, b.data);
+      });
+      return el(ID.Cluster, U(ID.Timecode, c.ms), ...items);
+    });
+
+    // Cues with fixed-width positions so their size doesn't depend on offsets.
+    const cueClusters = clusters.map((c, i) => ({ c, i })).filter(({ c }) => c.cue);
+    const makeCues = (positions) => el(ID.Cues, ...cueClusters.map(({ c, i }) =>
+      el(ID.CuePoint, U(ID.CueTime, c.ms),
+        el(ID.CueTrackPositions, U(ID.CueTrack, 1), U(ID.CueClusterPosition, positions[i], 8)))));
+    const zeros = clusters.map(() => 0);
+    const cuesSize = makeCues(zeros).size;
+    const positions = [];
+    let off = info.size + tracksEl.size + cuesSize;
+    for (const cn of clusterNodes) { positions.push(off); off += cn.size; }
+    const cues = makeCues(positions);
+
+    const segment = el(ID.Segment, info, tracksEl, cues, ...clusterNodes);
+    return new Blob(flatten(node([header, segment]), []), { type: 'video/webm' });
+  }
+}
+
+/** Pick a VP9 or VP8 config the browser can encode. */
+async function pickVideoCodec(width, height, fps) {
+  if (typeof VideoEncoder === 'undefined') return null;
+  const bitrate = Math.round(Math.min(40e6, Math.max(2e6, width * height * fps * 0.14)));
+  for (const [codec, id] of [['vp09.00.10.08', 'V_VP9'], ['vp8', 'V_VP8']]) {
+    const config = { codec, width, height, bitrate, framerate: fps, latencyMode: 'quality' };
+    try {
+      const r = await VideoEncoder.isConfigSupported(config);
+      if (r.supported) return { config, matroska: id };
+    } catch { /* try next */ }
+  }
+  return null;
+}
+
+/**
+ * Decode the soundtrack of a media file and re-encode it to Opus.
+ * Resolves to null when there is no decodable audio or no AudioEncoder.
+ */
+async function encodeAudioTrack(file, maxSeconds, writer) {
+  if (typeof AudioEncoder === 'undefined') return null;
+  let buf;
+  try {
+    const ctx = new OfflineAudioContext(2, 48000, 48000);
+    buf = await ctx.decodeAudioData(await file.arrayBuffer());
+  } catch {
+    return null; // silent clip or unsupported container
+  }
+  const channels = Math.min(2, buf.numberOfChannels);
+  const config = { codec: 'opus', sampleRate: 48000, numberOfChannels: channels, bitrate: 128000 };
+  try {
+    if (!(await AudioEncoder.isConfigSupported(config)).supported) return null;
+  } catch { return null; }
+  writer.o.audio = { sampleRate: 48000, channels };
+  const enc = new AudioEncoder({ output: (c, m) => writer.addAudio(c, m), error: (e) => console.warn(e) });
+  enc.configure(config);
+  const total = Math.min(buf.length, Math.floor(maxSeconds * 48000));
+  const step = 4800;
+  for (let s = 0; s < total; s += step) {
+    const n = Math.min(step, total - s);
+    const planar = new Float32Array(n * channels);
+    for (let c = 0; c < channels; c++) planar.set(buf.getChannelData(c).subarray(s, s + n), c * n);
+    const ad = new AudioData({ format: 'f32-planar', sampleRate: 48000, numberOfFrames: n,
+      numberOfChannels: channels, timestamp: Math.round((s / 48000) * 1e6), data: planar });
+    enc.encode(ad);
+    ad.close();
+  }
+  await enc.flush();
+  enc.close();
+  return true;
+}
+
+return { WebMWriter, pickVideoCodec, encodeAudioTrack };
+})();
+const __m_mp4 = (() => {
+// MP4 / MOV demuxer and muxer, no dependencies.
+//
+// Demuxer: reads only the `moov` index of a File (works for multi-GB clips),
+// returns per-track sample tables and WebCodecs decoder configs. Sample data
+// is read lazily with File.slice.
+// Muxer: H.264 / HEVC video from VideoEncoder plus AAC (copied from the
+// source, or encoded) or Opus audio, `moov` first ("fast start"), 64-bit
+// offsets when the file passes 4 GB. Large outputs are held as Blobs so the
+// browser can page them to disk.
+
+const td = new TextDecoder();
+const te = new TextEncoder();
+const fourcc = (u8, o) => td.decode(u8.subarray(o, o + 4));
+
+// ------------------------------------------------------------- reading ----
+
+class Box {
+  constructor(u8, start, end) {
+    this.u8 = u8;
+    this.dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    this.start = start;
+    this.end = end;
+  }
+  *children(from = this.start) {
+    let o = from;
+    while (o + 8 <= this.end) {
+      let size = this.dv.getUint32(o);
+      const type = fourcc(this.u8, o + 4);
+      let hdr = 8;
+      if (size === 1) { size = Number(this.dv.getBigUint64(o + 8)); hdr = 16; } else if (size === 0) size = this.end - o;
+      if (size < hdr || o + size > this.end) break;
+      yield { type, start: o, content: o + hdr, end: o + size };
+      o += size;
+    }
+  }
+  find(type, from) {
+    for (const c of this.children(from)) if (c.type === type) return c;
+    return null;
+  }
+}
+
+function path(root, u8, ...types) {
+  let box = root;
+  let cur = null;
+  for (const t of types) {
+    const b = new Box(u8, cur ? cur.content : box.start, cur ? cur.end : box.end);
+    cur = b.find(t);
+    if (!cur) return null;
+  }
+  return cur;
+}
+
+const hex = (n, w = 2) => n.toString(16).padStart(w, '0');
+
+function avcCodec(type, avcC) {
+  return `${type}.${hex(avcC[1])}${hex(avcC[2])}${hex(avcC[3])}`;
+}
+
+function hevcCodec(type, h) {
+  const space = h[1] >> 6, tier = (h[1] >> 5) & 1, profile = h[1] & 31;
+  let compat = ((h[2] << 24) | (h[3] << 16) | (h[4] << 8) | h[5]) >>> 0;
+  let rev = 0;
+  for (let i = 0; i < 32; i++) { rev = (rev << 1) | (compat & 1); compat >>>= 1; }
+  const cons = Array.from(h.subarray(6, 12));
+  while (cons.length && cons[cons.length - 1] === 0) cons.pop();
+  const parts = [type, `${['', 'A', 'B', 'C'][space]}${profile}`, (rev >>> 0).toString(16), `${tier ? 'H' : 'L'}${h[12]}`];
+  for (const c of cons) parts.push(c.toString(16));
+  return parts.join('.');
+}
+
+function readDescLen(u8, o) {
+  let len = 0, n = 0;
+  for (; n < 4; n++) {
+    const b = u8[o + n];
+    len = (len << 7) | (b & 0x7f);
+    if (!(b & 0x80)) { n++; break; }
+  }
+  return [len, o + n];
+}
+
+/** AudioSpecificConfig and object type from an esds box body (after version/flags). */
+function parseEsds(u8, o, end) {
+  let objectType = 0x40, asc = null;
+  while (o < end) {
+    const tag = u8[o];
+    const [len, p] = readDescLen(u8, o + 1);
+    if (tag === 0x03) {
+      let q = p + 2;
+      const flags = u8[q++];
+      if (flags & 0x80) q += 2;
+      if (flags & 0x40) q += 1 + u8[q];
+      if (flags & 0x20) q += 2;
+      o = q;
+      continue;
+    }
+    if (tag === 0x04) { objectType = u8[p]; o = p + 13; continue; }
+    if (tag === 0x05) { asc = u8.slice(p, p + len); break; }
+    o = p + len;
+  }
+  return { objectType, asc };
+}
+
+function parseSampleEntry(u8, dv, entry, handler) {
+  const type = fourcc(u8, entry.start + 4);
+  const info = { entryType: type, raw: u8.slice(entry.start, entry.end) };
+  if (handler === 'vide') {
+    info.codedWidth = dv.getUint16(entry.content + 24);
+    info.codedHeight = dv.getUint16(entry.content + 26);
+    const kids = new Box(u8, entry.content + 78, entry.end);
+    for (const c of kids.children()) {
+      const body = u8.subarray(c.content, c.end);
+      if (c.type === 'avcC') { info.codec = avcCodec(type, body); info.description = body.slice(); info.family = 'avc'; }
+      if (c.type === 'hvcC') { info.codec = hevcCodec(type, body); info.description = body.slice(); info.family = 'hevc'; }
+      if (c.type === 'vpcC') {
+        info.codec = `vp09.${hex(body[4])}.${hex(body[5])}.${hex(body[6] >> 4)}`; info.family = 'vp9';
+      }
+      if (c.type === 'av1C') {
+        const prof = body[1] >> 5, lvl = body[1] & 31, tierH = body[2] >> 7, hb = (body[2] >> 6) & 1, tw = (body[2] >> 5) & 1;
+        info.codec = `av01.${prof}.${hex(lvl)}${tierH ? 'H' : 'M'}.${hb ? (tw ? '12' : '10') : '08'}`;
+        info.description = body.slice(); info.family = 'av1';
+      }
+    }
+  } else if (handler === 'soun') {
+    const ver = dv.getUint16(entry.content + 8);
+    info.channels = dv.getUint16(entry.content + 16);
+    info.sampleSize = dv.getUint16(entry.content + 18);
+    info.sampleRate = dv.getUint32(entry.content + 24) >>> 16;
+    let kidsAt = entry.content + 28 + (ver === 1 ? 16 : ver === 2 ? 36 : 0);
+    if (ver === 2) info.sampleRate = Math.round(dv.getFloat64(entry.content + 32));
+    const scan = (from, to) => {
+      for (const c of new Box(u8, from, to).children()) {
+        if (c.type === 'esds') {
+          const { objectType, asc } = parseEsds(u8, c.content + 4, c.end);
+          info.asc = asc;
+          info.objectType = objectType;
+          if (objectType === 0x40 && asc) {
+            let aot = asc[0] >> 3;
+            if (aot === 31) aot = 32 + (((asc[0] & 7) << 3) | (asc[1] >> 5));
+            info.codec = `mp4a.40.${aot}`;
+            info.family = 'aac';
+          } else if (objectType === 0x6b || objectType === 0x69) { info.codec = 'mp3'; info.family = 'mp3'; }
+        } else if (c.type === 'wave') scan(c.content, c.end);
+        else if (c.type === 'dOps') { info.family = 'opus'; info.codec = 'opus'; info.dOps = u8.slice(c.content, c.end); }
+      }
+    };
+    scan(kidsAt, entry.end);
+    if (!info.family) info.family = type.trim();
+  }
+  return info;
+}
+
+function parseTrak(u8, trak, movieTimescale) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  const box = new Box(u8, trak.content, trak.end);
+  const tkhd = box.find('tkhd');
+  const t = {};
+  if (tkhd) {
+    const v = u8[tkhd.content];
+    const o = tkhd.content + (v === 1 ? 32 : 20);
+    t.id = dv.getUint32(tkhd.content + (v === 1 ? 20 : 12));
+    // o points at duration; matrix follows 20 bytes later in both versions
+    t.matrix = u8.slice(o + 20, o + 56);
+    t.displayWidth = dv.getUint32(o + 56) / 65536;
+    t.displayHeight = dv.getUint32(o + 60) / 65536;
+  }
+  const mdia = box.find('mdia');
+  if (!mdia) return null;
+  const md = new Box(u8, mdia.content, mdia.end);
+  const mdhd = md.find('mdhd');
+  const hdlr = md.find('hdlr');
+  if (!mdhd || !hdlr) return null;
+  const mv = u8[mdhd.content];
+  t.timescale = dv.getUint32(mdhd.content + (mv === 1 ? 20 : 12));
+  t.handler = fourcc(u8, hdlr.content + 8);
+  if (t.handler !== 'vide' && t.handler !== 'soun') return null;
+  t.type = t.handler === 'vide' ? 'video' : 'audio';
+
+  // edit list: initial delay (empty edit) and media start time
+  t.mediaTime = 0;
+  t.delay = 0;
+  const elst = path(box, u8, 'edts', 'elst');
+  if (elst) {
+    const v = u8[elst.content];
+    const n = dv.getUint32(elst.content + 4);
+    let o = elst.content + 8;
+    for (let i = 0; i < n; i++) {
+      const dur = v === 1 ? Number(dv.getBigUint64(o)) : dv.getUint32(o);
+      const mt = v === 1 ? Number(dv.getBigInt64(o + 8)) : dv.getInt32(o + 4);
+      o += v === 1 ? 20 : 12;
+      if (mt === -1) { t.delay += dur / movieTimescale; continue; }
+      t.mediaTime = mt;
+      break;
+    }
+  }
+
+  const stbl = path(md, u8, 'minf', 'stbl');
+  if (!stbl) return null;
+  const sb = new Box(u8, stbl.content, stbl.end);
+  const stsd = sb.find('stsd');
+  const first = new Box(u8, stsd.content + 8, stsd.end).children().next().value;
+  Object.assign(t, parseSampleEntry(u8, dv, first, t.handler));
+
+  // sample sizes
+  let sizes;
+  const stsz = sb.find('stsz');
+  const stz2 = sb.find('stz2');
+  if (stsz) {
+    const fixed = dv.getUint32(stsz.content + 4), n = dv.getUint32(stsz.content + 8);
+    sizes = new Uint32Array(n);
+    if (fixed) sizes.fill(fixed);
+    else for (let i = 0; i < n; i++) sizes[i] = dv.getUint32(stsz.content + 12 + i * 4);
+  } else if (stz2) {
+    const field = u8[stz2.content + 7], n = dv.getUint32(stz2.content + 8);
+    sizes = new Uint32Array(n);
+    for (let i = 0; i < n; i++) {
+      const o = stz2.content + 12;
+      sizes[i] = field === 16 ? dv.getUint16(o + i * 2) : field === 8 ? u8[o + i] : (i & 1 ? u8[o + (i >> 1)] & 15 : u8[o + (i >> 1)] >> 4);
+    }
+  } else return null;
+  const n = sizes.length;
+
+  // chunk offsets
+  const stco = sb.find('stco'), co64 = sb.find('co64');
+  const cbox = stco || co64;
+  const nChunks = dv.getUint32(cbox.content + 4);
+  const chunkOff = new Float64Array(nChunks);
+  for (let i = 0; i < nChunks; i++) {
+    chunkOff[i] = stco ? dv.getUint32(cbox.content + 8 + i * 4) : Number(dv.getBigUint64(cbox.content + 8 + i * 8));
+  }
+  // samples per chunk
+  const stsc = sb.find('stsc');
+  const ne = dv.getUint32(stsc.content + 4);
+  const offsets = new Float64Array(n);
+  let s = 0;
+  for (let e = 0; e < ne; e++) {
+    const firstChunk = dv.getUint32(stsc.content + 8 + e * 12) - 1;
+    const per = dv.getUint32(stsc.content + 12 + e * 12);
+    const lastChunk = e + 1 < ne ? dv.getUint32(stsc.content + 8 + (e + 1) * 12) - 1 : nChunks;
+    for (let c = firstChunk; c < lastChunk && s < n; c++) {
+      let o = chunkOff[c];
+      for (let k = 0; k < per && s < n; k++) { offsets[s] = o; o += sizes[s]; s++; }
+    }
+  }
+  // timing
+  const dts = new Float64Array(n), dur = new Float64Array(n), cto = new Float64Array(n);
+  const stts = sb.find('stts');
+  {
+    const m = dv.getUint32(stts.content + 4);
+    let i = 0, tcur = 0;
+    for (let e = 0; e < m; e++) {
+      const count = dv.getUint32(stts.content + 8 + e * 8), delta = dv.getUint32(stts.content + 12 + e * 8);
+      for (let k = 0; k < count && i < n; k++) { dts[i] = tcur; dur[i] = delta; tcur += delta; i++; }
+    }
+  }
+  const ctts = sb.find('ctts');
+  if (ctts) {
+    const m = dv.getUint32(ctts.content + 4);
+    let i = 0;
+    for (let e = 0; e < m; e++) {
+      const count = dv.getUint32(ctts.content + 8 + e * 8), off = dv.getInt32(ctts.content + 12 + e * 8);
+      for (let k = 0; k < count && i < n; k++) cto[i++] = off;
+    }
+  }
+  const stss = sb.find('stss');
+  let key = null;
+  if (stss) {
+    key = new Uint8Array(n);
+    const m = dv.getUint32(stss.content + 4);
+    for (let e = 0; e < m; e++) key[dv.getUint32(stss.content + 8 + e * 4) - 1] = 1;
+  }
+  t.samples = { count: n, offsets, sizes, dts, dur, cto, key };
+  const lastDur = n ? dur[n - 1] : 0;
+  t.duration = n ? (dts[n - 1] + lastDur - t.mediaTime) / t.timescale : 0;
+  t.bytes = sizes.reduce((a, b) => a + b, 0);
+  return t;
+}
+
+/** Parse the moov box of an MP4/MOV File. Throws if the file is not MP4/MOV. */
+async function openMp4(file) {
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const t0 = fourcc(head, 4);
+  if (!['ftyp', 'moov', 'mdat', 'wide', 'free', 'skip'].includes(t0)) throw new Error('not an MP4/MOV file');
+  let o = 0, moov = null, brand = '';
+  while (o + 8 <= file.size) {
+    const h = new Uint8Array(await file.slice(o, o + 16).arrayBuffer());
+    const dv = new DataView(h.buffer);
+    let size = dv.getUint32(0);
+    const type = fourcc(h, 4);
+    if (size === 1) size = Number(dv.getBigUint64(8));
+    else if (size === 0) size = file.size - o;
+    if (size < 8) break;
+    if (type === 'ftyp') brand = fourcc(h, 8);
+    if (type === 'moov') {
+      if (size > 512 * 1024 * 1024) throw new Error('moov box too large');
+      moov = new Uint8Array(await file.slice(o, o + size).arrayBuffer());
+      break;
+    }
+    o += size;
+  }
+  if (!moov) throw new Error('no moov box (file is incomplete or fragmented)');
+  const root = new Box(moov, 8, moov.length);
+  const mvhd = root.find('mvhd');
+  const dv = new DataView(moov.buffer);
+  const movieTimescale = mvhd ? dv.getUint32(mvhd.content + (moov[mvhd.content] === 1 ? 20 : 12)) : 1000;
+  const tracks = [];
+  for (const c of root.children()) if (c.type === 'trak') { const t = parseTrak(moov, c, movieTimescale); if (t) tracks.push(t); }
+  const video = tracks.find((t) => t.type === 'video' && t.samples.count) || null;
+  const audio = tracks.find((t) => t.type === 'audio' && t.samples.count) || null;
+  return { brand, movieTimescale, video, audio, file };
+}
+
+/** Sequential sample reader with an 8 MB read-ahead window. */
+class SampleReader {
+  constructor(file, track) {
+    this.file = file;
+    this.t = track;
+    this.winStart = 0;
+    this.win = new Uint8Array(0);
+  }
+  async read(i) {
+    const s = this.t.samples, off = s.offsets[i], size = s.sizes[i];
+    if (off < this.winStart || off + size > this.winStart + this.win.length) {
+      const len = Math.max(size, 8 << 20);
+      this.winStart = off;
+      this.win = new Uint8Array(await this.file.slice(off, Math.min(this.file.size, off + len)).arrayBuffer());
+    }
+    return this.win.subarray(off - this.winStart, off - this.winStart + size);
+  }
+}
+
+// ------------------------------------------------------------- writing ----
+
+class Out {
+  constructor() { this.parts = []; this.size = 0; }
+  u8(v) { this.parts.push(Uint8Array.of(v & 255)); this.size += 1; return this; }
+  u16(v) { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0, v); return this.bytes(b); }
+  u32(v) { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, v >>> 0); return this.bytes(b); }
+  i32(v) { const b = new Uint8Array(4); new DataView(b.buffer).setInt32(0, v); return this.bytes(b); }
+  u64(v) { const b = new Uint8Array(8); new DataView(b.buffer).setBigUint64(0, BigInt(Math.round(v))); return this.bytes(b); }
+  str(s) { return this.bytes(te.encode(s)); }
+  zeros(n) { return this.bytes(new Uint8Array(n)); }
+  bytes(b) { this.parts.push(b); this.size += b.length; return this; }
+  join() { const o = new Uint8Array(this.size); let p = 0; for (const b of this.parts) { o.set(b, p); p += b.length; } return o; }
+}
+function box(type, ...body) {
+  const o = new Out();
+  let size = 8;
+  for (const b of body) size += b.length;
+  o.u32(size).str(type);
+  for (const b of body) o.bytes(b);
+  return o.join();
+}
+const full = (type, version, flags, ...body) => box(type, Uint8Array.of(version, (flags >> 16) & 255, (flags >> 8) & 255, flags & 255), ...body);
+const w = (fn) => { const o = new Out(); fn(o); return o.join(); };
+const IDENTITY = w((o) => { o.u32(0x10000).u32(0).u32(0).u32(0).u32(0x10000).u32(0).u32(0).u32(0).u32(0x40000000); });
+
+function descr(tag, body) {
+  const len = body.length;
+  return w((o) => { o.u8(tag).u8(0x80 | ((len >> 21) & 127)).u8(0x80 | ((len >> 14) & 127)).u8(0x80 | ((len >> 7) & 127)).u8(len & 127).bytes(body); });
+}
+
+/** mp4a sample entry with esds for an AAC AudioSpecificConfig. */
+function mp4aEntry(asc, channels, sampleRate, bitrate = 128000) {
+  const dsi = descr(0x05, asc);
+  const dcd = descr(0x04, w((o) => { o.u8(0x40).u8(0x15).u8(0).u16(0).u32(bitrate).u32(bitrate).bytes(dsi); }));
+  const es = descr(0x03, w((o) => { o.u16(0).u8(0).bytes(dcd).bytes(descr(0x06, Uint8Array.of(2))); }));
+  const esds = full('esds', 0, 0, es);
+  return box('mp4a', w((o) => {
+    o.zeros(6).u16(1).zeros(8).u16(channels).u16(16).u16(0).u16(0).u32((Math.min(sampleRate, 65535) << 16) >>> 0);
+  }), esds);
+}
+
+/** Opus sample entry with dOps (preSkip in samples at 48 kHz). */
+function opusEntry(channels, inputRate, preSkip = 312) {
+  const dops = box('dOps', w((o) => { o.u8(0).u8(channels).u16(preSkip).u32(inputRate).u16(0).u8(0); }));
+  return box('Opus', w((o) => { o.zeros(6).u16(1).zeros(8).u16(channels).u16(16).u16(0).u16(0).u32((48000 << 16) >>> 0); }), dops);
+}
+
+function videoEntry(family, width, height, description) {
+  const head = w((o) => {
+    o.zeros(6).u16(1).zeros(16).u16(width).u16(height).u32(0x480000).u32(0x480000).u32(0).u16(1).zeros(32).u16(0x18).u16(0xffff);
+  });
+  return family === 'hevc' ? box('hvc1', head, box('hvcC', description)) : box('avc1', head, box('avcC', description));
+}
+
+/** Holds encoded data as a growing list of Blobs so large exports page to disk. */
+class SpillStore {
+  constructor() { this.pending = []; this.pendingBytes = 0; this.blobs = []; this.index = []; }
+  add(u8) {
+    this.index.push([this.blobs.length, this.pendingBytes, u8.length]);
+    this.pending.push(u8);
+    this.pendingBytes += u8.length;
+    if (this.pendingBytes >= 32 << 20) this.flush();
+  }
+  flush() {
+    if (!this.pending.length) return;
+    this.blobs.push(new Blob(this.pending));
+    this.pending = [];
+    this.pendingBytes = 0;
+  }
+  slice(i) {
+    const [b, off, len] = this.index[i];
+    return this.blobs[b].slice(off, off + len);
+  }
+}
+
+/**
+ * MP4 writer for one video track (H.264 or HEVC from VideoEncoder) and an
+ * optional audio track. Audio samples are Blobs (e.g. slices of the source
+ * File, copied without re-encoding) or Uint8Arrays from AudioEncoder.
+ */
+class Mp4Writer {
+  /**
+   * @param {{family:'avc'|'hevc', width:number, height:number, timescale?:number,
+   *          matrix?:Uint8Array, displayWidth?:number, displayHeight?:number}} video
+   * @param {{entry:Uint8Array, timescale:number, mediaTime?:number}|null} audio
+   */
+  constructor(video, audio = null) {
+    this.v = { timescale: 90000, ...video };
+    this.a = audio;
+    this.store = new SpillStore();
+    this.vs = []; // {cts (µs), dur (µs), key}
+    this.as = []; // {data, dts, dur} in audio timescale
+    this.description = null;
+  }
+  addVideo(chunk, meta) {
+    if (meta?.decoderConfig?.description && !this.description) {
+      const d = meta.decoderConfig.description;
+      this.description = d instanceof Uint8Array ? d.slice() : new Uint8Array(ArrayBuffer.isView(d) ? d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength) : d.slice(0));
+    }
+    const data = new Uint8Array(chunk.byteLength);
+    chunk.copyTo(data);
+    this.store.add(data);
+    this.vs.push({ cts: chunk.timestamp, dur: chunk.duration || 0, key: chunk.type === 'key' });
+  }
+  addAudio(data, dts, dur) { this.as.push({ data, dts, dur }); }
+
+  get videoBytes() { return this.store.index.reduce((a, x) => a + x[2], 0); }
+
+  finalize() {
+    if (!this.description) throw new Error('encoder produced no decoder configuration');
+    this.store.flush();
+    const V = this.v, A = this.a;
+    const vts = V.timescale;
+    const n = this.vs.length;
+    // durations: fill gaps from timestamps, last frame repeats previous
+    const toTs = (us) => Math.round((us * vts) / 1e6);
+    const cts = this.vs.map((s) => toTs(s.cts));
+    const sorted = cts.slice().sort((a, b) => a - b);
+    const reordered = cts.some((c, i) => c !== sorted[i]);
+    const base = sorted[0] || 0;
+    const dts = sorted.map((c) => c - base);
+    const vdur = dts.map((d, i) => (i + 1 < n ? dts[i + 1] - d : (toTs(this.vs[i].dur) || (n > 1 ? dts[i] - dts[i - 1] : 3000))));
+    const vDurationTs = dts.length ? dts[n - 1] + vdur[n - 1] : 0;
+
+    // interleave by time
+    const order = [];
+    for (let i = 0; i < n; i++) order.push({ t: (cts[i] - base) / vts, track: 1, i });
+    if (A) {
+      const mt = A.mediaTime || 0;
+      for (let i = 0; i < this.as.length; i++) order.push({ t: (this.as[i].dts - mt) / A.timescale, track: 2, i });
+    }
+    order.sort((a, b) => a.t - b.t || a.track - b.track);
+    const sizeOf = (e) => (e.track === 1 ? this.store.index[e.i][2] : (this.as[e.i].data.size ?? this.as[e.i].data.length));
+    let mdatBytes = 0;
+    for (const e of order) mdatBytes += sizeOf(e);
+
+    const build = (use64, offsets) => {
+      const stco = (list) => (use64
+        ? full('co64', 0, 0, w((o) => { o.u32(list.length); for (const x of list) o.u64(x); }))
+        : full('stco', 0, 0, w((o) => { o.u32(list.length); for (const x of list) o.u32(x); })));
+      const stts = (durs) => {
+        const runs = [];
+        for (const d of durs) { const last = runs[runs.length - 1]; if (last && last[1] === d) last[0]++; else runs.push([1, d]); }
+        return full('stts', 0, 0, w((o) => { o.u32(runs.length); for (const [c, d] of runs) o.u32(c).u32(d); }));
+      };
+      const stsz = (sizes) => full('stsz', 0, 0, w((o) => { o.u32(0).u32(sizes.length); for (const s of sizes) o.u32(s); }));
+      const stsc = full('stsc', 0, 0, w((o) => { o.u32(1).u32(1).u32(1).u32(1); }));
+      const dref = box('dinf', full('dref', 0, 0, w((o) => o.u32(1)), full('url ', 0, 1)));
+      const movieTs = 1000;
+      const vDurMovie = Math.round((vDurationTs / vts) * movieTs);
+
+      const vSizes = this.store.index.map((x) => x[2]);
+      const keys = [];
+      this.vs.forEach((s, i) => { if (s.key) keys.push(i + 1); });
+      const vStbl = [
+        full('stsd', 0, 0, w((o) => o.u32(1)), videoEntry(V.family, V.width, V.height, this.description)),
+        stts(vdur),
+        full('stss', 0, 0, w((o) => { o.u32(keys.length); for (const k of keys) o.u32(k); })),
+      ];
+      if (reordered) {
+        vStbl.push(full('ctts', 1, 0, w((o) => { o.u32(n); for (let i = 0; i < n; i++) o.u32(1).i32(cts[i] - base - dts[i]); })));
+      }
+      vStbl.push(stsc, stsz(vSizes), stco(offsets.v));
+      const mdhd = (ts, dur) => full('mdhd', 1, 0, w((o) => { o.u64(0).u64(0).u32(ts).u64(dur).u16(0x55c4).u16(0); }));
+      const hdlr = (type, name) => full('hdlr', 0, 0, w((o) => { o.u32(0).str(type).zeros(12).str(name).u8(0); }));
+      const tkhd = (id, dur, vol, matrix, wd, ht) => full('tkhd', 1, 3, w((o) => {
+        o.u64(0).u64(0).u32(id).u32(0).u64(dur).zeros(8).u16(0).u16(0).u16(vol).u16(0).bytes(matrix).u32(Math.round(wd * 65536)).u32(Math.round(ht * 65536));
+      }));
+      const vtrak = box('trak',
+        tkhd(1, vDurMovie, 0, V.matrix || IDENTITY, V.displayWidth || V.width, V.displayHeight || V.height),
+        box('mdia', mdhd(vts, vDurationTs), hdlr('vide', 'Reefhue video'),
+          box('minf', full('vmhd', 0, 1, new Uint8Array(8)), dref, box('stbl', ...vStbl))));
+      const traks = [vtrak];
+      let aDurMovie = 0;
+      if (A && this.as.length) {
+        const adur = this.as.map((s) => s.dur);
+        const aTotal = adur.reduce((x, y) => x + y, 0);
+        const mt = A.mediaTime || 0;
+        aDurMovie = Math.round(((aTotal - mt) / A.timescale) * movieTs);
+        const kids = [];
+        if (mt > 0) {
+          kids.push(box('edts', full('elst', 1, 0, w((o) => { o.u32(1).u64(Math.max(0, aDurMovie)).u64(mt).u16(1).u16(0); }))));
+        }
+        traks.push(box('trak',
+          tkhd(2, aDurMovie, 0x0100, IDENTITY, 0, 0), ...kids,
+          box('mdia', mdhd(A.timescale, aTotal), hdlr('soun', 'Reefhue audio'),
+            box('minf', full('smhd', 0, 0, new Uint8Array(4)), dref,
+              box('stbl', full('stsd', 0, 0, w((o) => o.u32(1)), A.entry), stts(adur), stsc,
+                stsz(this.as.map((s) => s.data.size ?? s.data.length)), stco(offsets.a))))));
+      }
+      const mvhd = full('mvhd', 1, 0, w((o) => {
+        o.u64(0).u64(0).u32(movieTs).u64(Math.max(vDurMovie, aDurMovie)).u32(0x10000).u16(0x100).zeros(10).bytes(IDENTITY).zeros(24).u32(traks.length + 1);
+      }));
+      return box('moov', mvhd, ...traks);
+    };
+
+    const brands = V.family === 'hevc' ? ['isom', 'iso2', 'mp41'] : ['isom', 'iso2', 'avc1', 'mp41'];
+    const ftyp = box('ftyp', w((o) => { o.str('isom').u32(512); for (const b of brands) o.str(b); }));
+    const zeroOffsets = { v: new Array(n).fill(0), a: new Array(this.as.length).fill(0) };
+    let use64 = false;
+    let moov = build(false, zeroOffsets);
+    let mdatHdr = mdatBytes + 8 > 0xffffffff ? 16 : 8;
+    if (ftyp.length + moov.length + mdatHdr + mdatBytes > 0xffffffff) { use64 = true; moov = build(true, zeroOffsets); }
+    let p = ftyp.length + moov.length + mdatHdr;
+    const offsets = { v: new Array(n), a: new Array(this.as.length) };
+    const parts = [];
+    for (const e of order) {
+      if (e.track === 1) { offsets.v[e.i] = p; parts.push(this.store.slice(e.i)); } else { offsets.a[e.i] = p; parts.push(this.as[e.i].data); }
+      p += sizeOf(e);
+    }
+    moov = build(use64, offsets);
+    const mdat = mdatHdr === 16
+      ? w((o) => { o.u32(1).str('mdat').u64(mdatBytes + 16); })
+      : w((o) => { o.u32(mdatBytes + 8).str('mdat'); });
+    return new Blob([ftyp, moov, mdat, ...parts], { type: 'video/mp4' });
+  }
+}
+
+return { openMp4, SampleReader, mp4aEntry, opusEntry, Mp4Writer };
+})();
+const __m_gpu = (() => {
+// WebGL2 renderer: runs the per-pixel part of the Reefhue engine on the GPU.
+//
+// The Rust engine still does all the thinking: it analyses each frame,
+// builds the tone curve and the clarity grid and derives every constant
+// (engine.gpuFrame). This shader only evaluates the same formula as
+// `process` in engine/src/lib.rs, so CPU and GPU output match to within
+// rounding (checked by tests/parity).
+
+const VS = `#version 300 es
+out vec2 vUv;
+void main() {
+  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  vUv = vec2(p.x, 1.0 - p.y);
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+const FS = `#version 300 es
+precision highp float;
+precision highp sampler2D;
+uniform sampler2D uSrc;
+uniform sampler2D uTone;   // 2048x1 R32F, input 0..2
+uniform sampler2D uGrid;   // gw x gh R32F, clarity base luminance
+uniform vec3 uM, uO;
+uniform float uKRed, uWg, uKBlue, uVref, uVeil;
+uniform float uClarity, uStrength, uSat, uVib, uWSat, uWLum, uWHue;
+uniform mat3 uHue;
+uniform vec2 uGridSize;
+in vec2 vUv;
+out vec4 outColor;
+const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
+
+float donor(float g, float b) {
+  float d = uWg * g + (1.0 - uWg) * b;
+  float veil = b - g - uVref;
+  return veil > 0.0 ? max(d - uVeil * veil, 0.0) : d;
+}
+float tone(float v) {
+  float i = v * 1024.0;
+  if (i <= 0.0) return texelFetch(uTone, ivec2(0, 0), 0).r;
+  if (i >= 2047.0) return texelFetch(uTone, ivec2(2047, 0), 0).r;
+  float i0 = floor(i);
+  float a = texelFetch(uTone, ivec2(int(i0), 0), 0).r;
+  float b = texelFetch(uTone, ivec2(int(i0) + 1, 0), 0).r;
+  return mix(a, b, i - i0);
+}
+float grid(vec2 uv) {
+  vec2 f = clamp(uv * uGridSize - 0.5, vec2(0.0), uGridSize - 1.0);
+  ivec2 p0 = ivec2(f);
+  ivec2 p1 = min(p0 + 1, ivec2(uGridSize) - 1);
+  vec2 t = f - vec2(p0);
+  float a = mix(texelFetch(uGrid, p0, 0).r, texelFetch(uGrid, ivec2(p1.x, p0.y), 0).r, t.x);
+  float b = mix(texelFetch(uGrid, ivec2(p0.x, p1.y), 0).r, texelFetch(uGrid, p1, 0).r, t.x);
+  return mix(a, b, t.y);
+}
+void main() {
+  vec3 c0 = texture(uSrc, vUv).rgb;
+  float r2 = c0.r + uKRed * (1.0 - c0.r) * donor(c0.g, c0.b);
+  float b2 = c0.b + uKBlue * (1.0 - c0.b) * c0.g;
+  vec3 c = vec3(r2, c0.g, b2) * uM + uO;
+  if (uClarity > 0.0) {
+    float d = clamp(dot(c, LUMA), 0.0, 1.5) - grid(vUv);
+    c += uClarity * d / (1.0 + 4.0 * abs(d));
+  }
+  vec3 v = vec3(tone(c.r), tone(c.g), tone(c.b));
+  if (uWLum != 0.0 || uWHue != 0.0) {
+    float water = clamp((min(v.g, v.b) - v.r) * 3.0, 0.0, 1.0);
+    if (water > 0.0) {
+      if (uWHue != 0.0) v += (uHue * v - v) * water;
+      if (uWLum != 0.0) v *= 1.0 + uWLum * 0.6 * water;
+    }
+  }
+  float yv = dot(v, LUMA);
+  float s = max(v.r, max(v.g, v.b)) - min(v.r, min(v.g, v.b));
+  float f = uSat;
+  if (uVib != 0.0) f *= 1.0 + uVib * (1.0 - s) * (uVib > 0.0 ? 1.0 : s + 0.3);
+  if (uWSat != 0.0) f *= 1.0 + uWSat * clamp((min(v.g, v.b) - v.r) * 3.0, 0.0, 1.0);
+  v = yv + (v - yv) * f;
+  if (uStrength < 1.0) v = c0 + (v - c0) * uStrength;
+  outColor = vec4(clamp(v, 0.0, 1.0), 1.0);
+}`;
+
+class GpuRenderer {
+  /** Returns a renderer, or null when WebGL2 is unavailable. */
+  static create() {
+    try {
+      const canvas = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(16, 16) : document.createElement('canvas');
+      const gl = canvas.getContext('webgl2', {
+        alpha: false, antialias: false, depth: false, stencil: false,
+        premultipliedAlpha: false, preserveDrawingBuffer: true, powerPreference: 'high-performance',
+      });
+      if (!gl) return null;
+      return new GpuRenderer(canvas, gl);
+    } catch {
+      return null;
+    }
+  }
+
+  constructor(canvas, gl) {
+    this.canvas = canvas;
+    this.gl = gl;
+    this.lost = false;
+    canvas.addEventListener?.('webglcontextlost', (e) => { e.preventDefault(); this.lost = true; });
+    const sh = (type, src) => {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+      return s;
+    };
+    const p = gl.createProgram();
+    gl.attachShader(p, sh(gl.VERTEX_SHADER, VS));
+    gl.attachShader(p, sh(gl.FRAGMENT_SHADER, FS));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    this.prog = p;
+    gl.useProgram(p);
+    this.u = {};
+    for (const n of ['uSrc', 'uTone', 'uGrid', 'uM', 'uO', 'uKRed', 'uWg', 'uKBlue', 'uVref', 'uVeil', 'uClarity',
+      'uStrength', 'uSat', 'uVib', 'uWSat', 'uWLum', 'uWHue', 'uHue', 'uGridSize']) this.u[n] = gl.getUniformLocation(p, n);
+    gl.uniform1i(this.u.uSrc, 0);
+    gl.uniform1i(this.u.uTone, 1);
+    gl.uniform1i(this.u.uGrid, 2);
+    const tex = (filter) => {
+      const t = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      return t;
+    };
+    this.tSrc = tex(gl.LINEAR);
+    this.tTone = tex(gl.NEAREST);
+    this.tGrid = tex(gl.NEAREST);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    this.vao = gl.createVertexArray();
+    gl.bindVertexArray(this.vao);
+    gl.disable(gl.DITHER);
+  }
+
+  get ok() { return !this.lost && !this.gl.isContextLost(); }
+
+  /**
+   * Render `source` (VideoFrame, ImageBitmap, canvas, video or ImageData) at
+   * w×h with the constants from engine.gpuFrame(). The result stays in
+   * this.canvas, ready for `new VideoFrame(renderer.canvas, ...)`.
+   */
+  render(source, w, h, frame) {
+    const gl = this.gl;
+    if (this.canvas.width !== w || this.canvas.height !== h) {
+      this.canvas.width = w;
+      this.canvas.height = h;
+    }
+    gl.viewport(0, 0, w, h);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.tSrc);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.tTone);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, frame.tone.length, 1, 0, gl.RED, gl.FLOAT, frame.tone);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.tGrid);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, frame.gw, frame.gh, 0, gl.RED, gl.FLOAT, frame.grid);
+    const P = frame.params, u = this.u;
+    gl.uniform3f(u.uM, P[0], P[1], P[2]);
+    gl.uniform3f(u.uO, P[3], P[4], P[5]);
+    gl.uniform1f(u.uKRed, P[6]);
+    gl.uniform1f(u.uWg, P[7]);
+    gl.uniform1f(u.uKBlue, P[8]);
+    gl.uniform1f(u.uVref, P[9]);
+    gl.uniform1f(u.uClarity, P[10]);
+    gl.uniform1f(u.uStrength, P[11]);
+    gl.uniform1f(u.uSat, P[12]);
+    gl.uniform1f(u.uVib, P[13]);
+    gl.uniform1f(u.uWSat, P[14]);
+    gl.uniform1f(u.uWLum, P[15]);
+    gl.uniformMatrix3fv(u.uHue, true, P.subarray(16, 25));
+    gl.uniform2f(u.uGridSize, frame.gw, frame.gh);
+    gl.uniform1f(u.uWHue, P[27]);
+    gl.uniform1f(u.uVeil, P[28]);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  /** Read the last render back as top-down RGBA (for previews and tests). */
+  read() {
+    const gl = this.gl, w = this.canvas.width, h = this.canvas.height;
+    const buf = new Uint8Array(w * h * 4);
+    gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+    const out = new Uint8ClampedArray(w * h * 4), row = w * 4;
+    for (let y = 0; y < h; y++) out.set(buf.subarray((h - 1 - y) * row, (h - y) * row), y * row);
+    return out;
+  }
+}
+
+return { GpuRenderer };
+})();
+const __m_zip = (() => {
+// Minimal ZIP writer (stored, no compression: photos and videos are already
+// compressed). Streams CRC-32 over Blobs, switches to ZIP64 when needed, and
+// returns one Blob built from slices, so nothing is copied into memory twice.
+
+const CRC = new Uint32Array(256);
+for (let n = 0; n < 256; n++) {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  CRC[n] = c >>> 0;
+}
+
+async function crc32(blob, onBytes) {
+  let c = 0xffffffff;
+  const reader = blob.stream().getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    for (let i = 0; i < value.length; i++) c = CRC[(c ^ value[i]) & 255] ^ (c >>> 8);
+    onBytes?.(value.length);
+  }
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+const te = new TextEncoder();
+
+function le(size) {
+  const b = new Uint8Array(size);
+  const dv = new DataView(b.buffer);
+  let o = 0;
+  const api = {
+    u16(v) { dv.setUint16(o, v, true); o += 2; return api; },
+    u32(v) { dv.setUint32(o, v >>> 0, true); o += 4; return api; },
+    u64(v) { dv.setBigUint64(o, BigInt(v), true); o += 8; return api; },
+    bytes(x) { b.set(x, o); o += x.length; return api; },
+    done() { return b; },
+  };
+  return api;
+}
+
+function dosTime(d) {
+  return {
+    time: (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1),
+    date: ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate(),
+  };
+}
+
+/** Unique, safe names inside the archive. */
+function uniqueNames(names) {
+  const seen = new Map();
+  return names.map((n) => {
+    const clean = n.replace(/[\\/:*?"<>|]+/g, '_');
+    const k = clean.toLowerCase();
+    const c = seen.get(k) || 0;
+    seen.set(k, c + 1);
+    if (!c) return clean;
+    const dot = clean.lastIndexOf('.');
+    return dot > 0 ? `${clean.slice(0, dot)} (${c + 1})${clean.slice(dot)}` : `${clean} (${c + 1})`;
+  });
+}
+
+/**
+ * @param {{name:string, blob:Blob}[]} files
+ * @param {(fraction:number)=>void} [onProgress]
+ * @returns {Promise<Blob>}
+ */
+async function makeZip(files, onProgress) {
+  const total = files.reduce((a, f) => a + f.blob.size, 0) || 1;
+  let done = 0;
+  const names = uniqueNames(files.map((f) => f.name));
+  const { time, date } = dosTime(new Date());
+  const parts = [];
+  const central = [];
+  let offset = 0;
+  for (let i = 0; i < files.length; i++) {
+    const { blob } = files[i];
+    const name = te.encode(names[i]);
+    const crc = await crc32(blob, (n) => { done += n; onProgress?.(done / total); });
+    const size = blob.size;
+    const big = size >= 0xffffffff || offset >= 0xffffffff;
+    const extraLocal = big ? le(20).u16(1).u16(16).u64(size).u64(size).done() : new Uint8Array(0);
+    const local = le(30 + name.length + extraLocal.length)
+      .u32(0x04034b50).u16(big ? 45 : 20).u16(0x0800).u16(0).u16(time).u16(date).u32(crc)
+      .u32(big ? 0xffffffff : size).u32(big ? 0xffffffff : size).u16(name.length).u16(extraLocal.length)
+      .bytes(name).bytes(extraLocal).done();
+    const extraCentral = big ? le(28).u16(1).u16(24).u64(size).u64(size).u64(offset).done() : new Uint8Array(0);
+    central.push(le(46 + name.length + extraCentral.length)
+      .u32(0x02014b50).u16(big ? 45 : 20).u16(big ? 45 : 20).u16(0x0800).u16(0).u16(time).u16(date).u32(crc)
+      .u32(big ? 0xffffffff : size).u32(big ? 0xffffffff : size).u16(name.length).u16(extraCentral.length)
+      .u16(0).u16(0).u16(0).u32(0).u32(big ? 0xffffffff : offset).bytes(name).bytes(extraCentral).done());
+    parts.push(local, blob);
+    offset += local.length + size;
+  }
+  const cdSize = central.reduce((a, c) => a + c.length, 0);
+  const cdOffset = offset;
+  const need64 = cdOffset >= 0xffffffff || files.length >= 0xffff;
+  const tail = [];
+  if (need64) {
+    tail.push(le(56).u32(0x06064b50).u64(44).u16(45).u16(45).u32(0).u32(0)
+      .u64(files.length).u64(files.length).u64(cdSize).u64(cdOffset).done());
+    tail.push(le(20).u32(0x07064b50).u32(0).u64(cdOffset + cdSize).u32(1).done());
+  }
+  tail.push(le(22).u32(0x06054b50).u16(0).u16(0)
+    .u16(need64 ? 0xffff : files.length).u16(need64 ? 0xffff : files.length)
+    .u32(cdSize).u32(need64 ? 0xffffffff : cdOffset).u16(0).done());
+  return new Blob([...parts, ...central, ...tail], { type: 'application/zip' });
+}
+
+return { makeZip };
+})();
+const __m_pipeline = (() => {
+// Export pipeline: turns one photo or video into its restored version.
+//
+// Fast path (MP4/MOV with a codec the browser decodes):
+//   File ─ mp4.js demux ─ VideoDecoder ─ per-frame Rust analysis on a
+//   256 px thumbnail ─ GPU shader (gpu.js) or Rust/WASM ─ VideoEncoder
+//   (H.264 / HEVC, hardware when available) ─ MP4 muxer, original AAC sound
+//   copied untouched. No seeking, no full-size pixel copies on the GPU path.
+// Compatibility path (anything else the <video> element can play):
+//   seek frame by frame, same processing, MP4 when H.264 encoding exists,
+//   otherwise WebM (VP9/VP8 + Opus).
+
+const { buildSettings, smoothAuto } = __m_engine;
+const { openMp4, SampleReader, Mp4Writer, mp4aEntry, opusEntry } = __m_mp4;
+const { WebMWriter, pickVideoCodec, encodeAudioTrack } = __m_webm;
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const even = (x) => Math.max(2, Math.round(x / 2) * 2);
+class Fallback extends Error {}
+
+/** Thumbnail size used for analysis (same rule as the preview). */
+function thumbSize(w, h) {
+  const s = Math.min(1, 256 / Math.max(w, h));
+  return [Math.max(1, Math.round(w * s)), Math.max(1, Math.round(h * s))];
+}
+
+function aborted(signal) {
+  if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError');
+}
+
+// ----------------------------------------------------------- encoders ----
+
+const AVC_LEVELS = [ // [level_idc, max macroblocks/frame, max macroblocks/s]
+  [0x1f, 3600, 108000], [0x28, 8192, 245760], [0x2a, 8704, 522240], [0x32, 22080, 589824],
+  [0x33, 36864, 983040], [0x34, 36864, 2073600], [0x3c, 139264, 4177920], [0x3d, 139264, 8355840], [0x3e, 139264, 16711680],
+];
+const HEVC_LEVELS = [ // [level*30, max luma samples/frame, max luma samples/s]
+  [93, 983040, 33177600], [120, 2228224, 66846720], [123, 2228224, 133693440], [150, 8912896, 267386880],
+  [153, 8912896, 534773760], [156, 8912896, 1069547520], [183, 35651584, 2139095040],
+];
+
+function avcCodec(w, h, fps) {
+  const fs = Math.ceil(w / 16) * Math.ceil(h / 16);
+  const l = AVC_LEVELS.find(([, mfs, mbps]) => fs <= mfs && fs * fps <= mbps);
+  return l ? `avc1.6400${l[0].toString(16)}` : null;
+}
+function hevcCodec(w, h, fps) {
+  const ls = w * h;
+  const l = HEVC_LEVELS.find(([, mfs, mps]) => ls <= mfs && ls * fps <= mps);
+  return l ? `hvc1.1.6.L${l[0]}.B0` : null;
+}
+
+/** Best MP4 video encoder config the browser supports, or null. */
+async function pickMp4Encoder(w, h, fps, sourceBps, preferHevc = false) {
+  if (typeof VideoEncoder === 'undefined') return null;
+  const cands = [];
+  const avc = avcCodec(w, h, fps);
+  const hevc = hevcCodec(w, h, fps);
+  const base = Math.max(w * h * fps * 0.07, sourceBps || 0);
+  const mk = (family, codec, factor) => ({
+    family,
+    config: {
+      codec, width: w, height: h, framerate: fps, latencyMode: 'quality',
+      bitrate: Math.round(Math.min(120e6, Math.max(2e6, base * factor))),
+      ...(family === 'avc' ? { avc: { format: 'avc' } } : { hevc: { format: 'hevc' } }),
+    },
+  });
+  if (hevc && preferHevc) cands.push(mk('hevc', hevc, 0.75));
+  if (avc) cands.push(mk('avc', avc, 1.1));
+  if (hevc && !preferHevc) cands.push(mk('hevc', hevc, 0.75));
+  for (const c of cands) {
+    try {
+      const r = await VideoEncoder.isConfigSupported(c.config);
+      if (r.supported) return c;
+    } catch { /* next */ }
+  }
+  return null;
+}
+
+/** Decode the file's audio with Web Audio and encode AAC (or Opus) for MP4. */
+async function encodeAudioMp4(file, maxSeconds) {
+  if (typeof AudioEncoder === 'undefined' || file.size > 1.5e9) return null;
+  let buf;
+  try {
+    const ctx = new OfflineAudioContext(2, 48000, 48000);
+    buf = await ctx.decodeAudioData(await file.arrayBuffer());
+  } catch { return null; }
+  const channels = Math.min(2, buf.numberOfChannels);
+  for (const codec of ['mp4a.40.2', 'opus']) {
+    const config = { codec, sampleRate: 48000, numberOfChannels: channels, bitrate: 160000 };
+    try { if (!(await AudioEncoder.isConfigSupported(config)).supported) continue; } catch { continue; }
+    const chunks = [];
+    let desc = null;
+    const enc = new AudioEncoder({
+      output: (c, m) => {
+        if (m?.decoderConfig?.description && !desc) desc = new Uint8Array(m.decoderConfig.description.buffer ? m.decoderConfig.description.buffer.slice(0) : m.decoderConfig.description.slice(0));
+        const d = new Uint8Array(c.byteLength);
+        c.copyTo(d);
+        chunks.push({ data: d, ts: c.timestamp, dur: c.duration });
+      },
+      error: (e) => console.warn(e),
+    });
+    enc.configure(config);
+    const total = Math.min(buf.length, Math.floor(maxSeconds * 48000));
+    const step = codec === 'opus' ? 960 * 5 : 1024 * 5;
+    for (let s = 0; s < total; s += step) {
+      const n = Math.min(step, total - s);
+      const planar = new Float32Array(n * channels);
+      for (let c = 0; c < channels; c++) planar.set(buf.getChannelData(c).subarray(s, s + n), c * n);
+      const ad = new AudioData({ format: 'f32-planar', sampleRate: 48000, numberOfFrames: n, numberOfChannels: channels, timestamp: Math.round((s / 48000) * 1e6), data: planar });
+      enc.encode(ad);
+      ad.close();
+    }
+    await enc.flush();
+    enc.close();
+    if (!chunks.length) continue;
+    let entry;
+    if (codec === 'opus') {
+      const preSkip = desc && desc.length >= 12 ? new DataView(desc.buffer, desc.byteOffset).getUint16(10, true) : 312;
+      entry = opusEntry(channels, 48000, preSkip);
+    } else {
+      const asc = desc && desc.length ? desc : Uint8Array.of(0x11, channels === 1 ? 0x88 : 0x90); // AAC-LC 48 kHz
+      entry = mp4aEntry(asc, channels, 48000, 160000);
+    }
+    const t0 = chunks[0].ts;
+    return {
+      label: codec === 'opus' ? 'Opus' : 'AAC',
+      track: { entry, timescale: 48000, mediaTime: 0 },
+      samples: chunks.map((c) => ({ data: c.data, dts: Math.round(((c.ts - t0) * 48000) / 1e6), dur: Math.round((c.dur * 48000) / 1e6) })),
+    };
+  }
+  return null;
+}
+
+// ---------------------------------------------------------- processing ----
+
+/** Per-frame processor shared by both paths: analysis + GPU or CPU render. */
+class FrameProcessor {
+  constructor(eng, gpu, user, locked, srcW, srcH, outW, outH) {
+    this.eng = eng;
+    this.gpu = gpu && gpu.ok ? gpu : null;
+    this.user = user;
+    this.locked = locked; // {data, w, h} or null
+    [this.tw, this.th] = thumbSize(srcW, srcH);
+    this.thumbC = new OffscreenCanvas(this.tw, this.th);
+    this.thumbG = this.thumbC.getContext('2d', { willReadFrequently: true });
+    this.outW = outW;
+    this.outH = outH;
+    if (!this.gpu) {
+      this.cpuC = new OffscreenCanvas(outW, outH);
+      this.cpuG = this.cpuC.getContext('2d', { willReadFrequently: true });
+    }
+    this.sm = { smooth: null, lastT: null };
+    this.t = { thumb: 0, analyze: 0, render: 0 }; // ms totals, for the speed test
+  }
+
+  get mode() { return this.gpu ? 'gpu' : 'cpu'; }
+
+  /** Process one source (VideoFrame / video element) at time t; returns a new VideoFrame. */
+  frame(src, t, timestamp, duration) {
+    const { eng, user, tw, th } = this;
+    const T = this.t;
+    let t0 = performance.now();
+    this.thumbG.drawImage(src, 0, 0, tw, th);
+    const thumb = this.thumbG.getImageData(0, 0, tw, th).data;
+    let t1 = performance.now();
+    T.thumb += t1 - t0;
+    const a = this.locked || { data: thumb, w: tw, h: th };
+    const auto = smoothAuto(eng.analyze(a.data, a.w, a.h, user.red / 100, user.balance / 100), t, this.sm);
+    const settings = buildSettings(auto, user);
+    t0 = performance.now();
+    T.analyze += t0 - t1;
+    let out;
+    if (this.gpu) {
+      const fd = eng.gpuFrame(settings, thumb, tw, th);
+      this.gpu.render(src, this.outW, this.outH, fd);
+      out = new VideoFrame(this.gpu.canvas, { timestamp, duration });
+    } else {
+      this.cpuG.drawImage(src, 0, 0, this.outW, this.outH);
+      const img = this.cpuG.getImageData(0, 0, this.outW, this.outH);
+      eng.process(img.data, this.outW, this.outH, settings, img.data, thumb, tw, th);
+      this.cpuG.putImageData(img, 0, 0);
+      out = new VideoFrame(this.cpuC, { timestamp, duration });
+    }
+    T.render += performance.now() - t0;
+    return out;
+  }
+}
+
+const msPer = (t, n) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, Math.round((v / Math.max(1, n)) * 10) / 10]));
+
+function outputSize(w, h, maxShort) {
+  let ow = w, oh = h;
+  const short = Math.min(w, h);
+  if (maxShort && short > maxShort) { const k = maxShort / short; ow = w * k; oh = h * k; }
+  return [even(ow), even(oh)];
+}
+
+/** Common encoder driver with back-pressure. */
+function makeEncoder(onChunk) {
+  let err = null;
+  const enc = new VideoEncoder({ output: onChunk, error: (e) => { err = e; } });
+  const E = {
+    enc,
+    waitMs: 0,
+    async push(frame, keyFrame) {
+      if (err) throw err;
+      enc.encode(frame, { keyFrame });
+      frame.close();
+      const t0 = performance.now();
+      while (enc.encodeQueueSize > 4) { if (err) throw err; await sleep(1); }
+      E.waitMs += performance.now() - t0;
+    },
+    async done() { await enc.flush(); if (err) throw err; enc.close(); },
+  };
+  return E;
+}
+
+// ------------------------------------------------------------ fast path ----
+
+async function exportFast(job) {
+  const { file, eng, gpu, user, locked, opts, onProgress, signal } = job;
+  let demux;
+  try { demux = await openMp4(file); } catch (e) { throw new Fallback(e.message); }
+  const vt = demux.video;
+  if (!vt) throw new Fallback('no video track');
+  if (!vt.codec) throw new Fallback(`video codec ${vt.entryType} is not supported`);
+  if (typeof VideoDecoder === 'undefined') throw new Fallback('WebCodecs is not available');
+  const decCfg = { codec: vt.codec, codedWidth: vt.codedWidth, codedHeight: vt.codedHeight };
+  if (vt.description) decCfg.description = vt.description;
+  const sup = await VideoDecoder.isConfigSupported(decCfg).catch(() => ({ supported: false }));
+  if (!sup.supported) throw new Fallback(`this browser cannot decode ${vt.codec}`);
+
+  const S = vt.samples, ts = vt.timescale;
+  const fps = Math.round((S.count / Math.max(vt.duration, 1e-3)) * 100) / 100;
+  const [ow, oh] = outputSize(vt.codedWidth, vt.codedHeight, opts.maxShort);
+  const srcBps = (vt.bytes * 8) / Math.max(vt.duration, 1e-3);
+  const wantMp4 = opts.format !== 'webm';
+  const mp4enc = wantMp4 ? await pickMp4Encoder(ow, oh, fps, srcBps * (ow * oh) / (vt.codedWidth * vt.codedHeight), vt.family === 'hevc') : null;
+  let writer, encCfg, container, codecLabel;
+  if (mp4enc) {
+    encCfg = mp4enc.config;
+    container = 'mp4';
+    codecLabel = mp4enc.family === 'hevc' ? 'HEVC' : 'H.264';
+    writer = new Mp4Writer({
+      family: mp4enc.family, width: ow, height: oh, timescale: ts >= 1000 ? ts : 90000, matrix: vt.matrix,
+      displayWidth: vt.displayWidth ? (vt.displayWidth * ow) / vt.codedWidth : ow,
+      displayHeight: vt.displayHeight ? (vt.displayHeight * oh) / vt.codedHeight : oh,
+    });
+  } else {
+    const pick = await pickVideoCodec(ow, oh, fps);
+    if (!pick) throw new Error('This browser cannot encode video.');
+    encCfg = pick.config;
+    container = 'webm';
+    codecLabel = pick.matroska === 'V_VP9' ? 'VP9' : 'VP8';
+    writer = new WebMWriter({ width: ow, height: oh, codec: pick.matroska });
+  }
+
+  // sound
+  let audioLabel = 'none';
+  const at = demux.audio;
+  if (container === 'mp4' && at) {
+    if (at.family === 'aac' && at.asc) {
+      writer.a = { entry: mp4aEntry(at.asc, at.channels || 2, at.sampleRate || 48000), timescale: at.timescale, mediaTime: at.mediaTime };
+      const A = at.samples;
+      const endT = at.mediaTime + vt.duration * at.timescale + at.timescale;
+      for (let i = 0; i < A.count && A.dts[i] < endT; i++) writer.addAudio(file.slice(A.offsets[i], A.offsets[i] + A.sizes[i]), A.dts[i], A.dur[i]);
+      audioLabel = 'original AAC, copied';
+    } else {
+      onProgress?.({ frac: 0, text: 'Encoding sound…' });
+      const enc = await encodeAudioMp4(file, vt.duration);
+      if (enc) {
+        writer.a = enc.track;
+        for (const s of enc.samples) writer.addAudio(s.data, s.dts, s.dur);
+        audioLabel = `${enc.label}, re-encoded`;
+      }
+    }
+  } else if (container === 'webm' && at) {
+    onProgress?.({ frac: 0, text: 'Encoding sound…' });
+    if (await encodeAudioTrack(file, vt.duration, writer)) audioLabel = 'Opus, re-encoded';
+  }
+  aborted(signal);
+
+  const proc = new FrameProcessor(eng, gpu, user, locked, vt.codedWidth, vt.codedHeight, ow, oh);
+  const E = makeEncoder((chunk, meta) => (container === 'mp4' ? writer.addVideo(chunk, meta) : writer.addVideo(chunk)));
+  E.enc.configure(encCfg);
+
+  const frames = [];
+  let decErr = null, wake = null, decodeDone = false;
+  const dec = new VideoDecoder({
+    output: (f) => { frames.push(f); wake?.(); },
+    error: (e) => { decErr = e; wake?.(); },
+  });
+  dec.configure(decCfg);
+  const reader = new SampleReader(file, vt);
+  let next = 0;
+  const mt = vt.mediaTime;
+  const feed = async () => {
+    while (next < S.count && dec.decodeQueueSize + frames.length < 6) {
+      const data = await reader.read(next);
+      const cts = S.dts[next] + S.cto[next] - mt;
+      dec.decode(new EncodedVideoChunk({
+        type: !S.key || S.key[next] ? 'key' : 'delta',
+        timestamp: Math.round((cts * 1e6) / ts),
+        duration: Math.round((S.dur[next] * 1e6) / ts),
+        data,
+      }));
+      next++;
+    }
+    if (next >= S.count && !feed.flushing) {
+      feed.flushing = true;
+      dec.flush().then(() => { decodeDone = true; wake?.(); }, (e) => { decErr = decErr || e; wake?.(); });
+    }
+  };
+  const total = S.count;
+  const keyEvery = Math.max(1, Math.round(fps * 2));
+  const t0 = performance.now();
+  let n = 0, decodeWait = 0;
+  const frameDur = Math.round(1e6 / (fps || 30));
+  try {
+    while (!(decodeDone && frames.length === 0)) {
+      aborted(signal);
+      await feed();
+      if (decErr) throw decErr;
+      if (!frames.length) {
+        const tw0 = performance.now();
+        await new Promise((r) => { wake = r; setTimeout(r, 25); });
+        wake = null;
+        decodeWait += performance.now() - tw0;
+        continue;
+      }
+      const f = frames.shift();
+      if (f.timestamp < 0) { f.close(); continue; }
+      let out;
+      try { out = proc.frame(f, f.timestamp / 1e6, f.timestamp, f.duration ?? frameDur); } finally { f.close(); }
+      await E.push(out, n % keyEvery === 0);
+      n++;
+      if (n % 4 === 0 || n === total) {
+        const el = (performance.now() - t0) / 1000;
+        onProgress?.({ frac: Math.min(1, n / total), fps: n / el, eta: ((total - n) * el) / n, text: `Frame ${n} of ${total}` });
+      }
+    }
+    await E.done();
+  } catch (e) {
+    for (const f of frames) f.close();
+    try { dec.close(); } catch { /* closed */ }
+    try { E.enc.close(); } catch { /* closed */ }
+    throw e;
+  }
+  try { dec.close(); } catch { /* closed */ }
+  onProgress?.({ frac: 1, text: 'Writing file…' });
+  const blob = container === 'mp4' ? writer.finalize() : writer.finalize((n * 1000) / (fps || 30));
+  const seconds = (performance.now() - t0) / 1000;
+  return {
+    blob, ext: container,
+    info: {
+      path: 'fast', render: proc.mode, codec: codecLabel, container, audio: audioLabel, frames: n, seconds, fps: n / seconds, width: ow, height: oh,
+      msPerFrame: msPer({ ...proc.t, decodeWait, encodeWait: E.waitMs }, n),
+    },
+  };
+}
+
+// ---------------------------------------------------- compatibility path ----
+
+function seekTo(v, t) {
+  return new Promise((res) => {
+    let gotFrame = !('requestVideoFrameCallback' in v), gotSeek = false, h = 0;
+    const check = () => { if (gotFrame && gotSeek) res(); };
+    if (!gotFrame) h = v.requestVideoFrameCallback(() => { gotFrame = true; check(); });
+    v.addEventListener('seeked', () => {
+      gotSeek = true; check();
+      setTimeout(() => { if (!gotFrame) { v.cancelVideoFrameCallback(h); gotFrame = true; check(); } }, 150);
+    }, { once: true });
+    v.currentTime = t;
+  });
+}
+
+async function exportCompat(job, fps) {
+  const { file, eng, gpu, user, locked, opts, onProgress, signal } = job;
+  const v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto';
+  v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none';
+  document.body.append(v);
+  const url = URL.createObjectURL(file);
+  try {
+    v.src = url;
+    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('This browser cannot play this video file.')); });
+    if (!Number.isFinite(v.duration)) { v.currentTime = 1e9; await new Promise((r) => { v.ondurationchange = r; }); }
+    const W = v.videoWidth, H = v.videoHeight, dur = v.duration;
+    if (!W || !H) throw new Error(job.codecHint ? `This browser cannot decode ${job.codecHint} video.` : 'This browser cannot decode the video in this file.');
+    fps = fps || 30;
+    const [ow, oh] = outputSize(W, H, opts.maxShort);
+    const mp4enc = opts.format !== 'webm' ? await pickMp4Encoder(ow, oh, fps, (file.size * 8) / dur) : null;
+    let writer, container, codecLabel, encCfg, audioLabel = 'none';
+    if (mp4enc) {
+      container = 'mp4'; encCfg = mp4enc.config; codecLabel = mp4enc.family === 'hevc' ? 'HEVC' : 'H.264';
+      writer = new Mp4Writer({ family: mp4enc.family, width: ow, height: oh, timescale: 90000 });
+      onProgress?.({ frac: 0, text: 'Encoding sound…' });
+      const a = await encodeAudioMp4(file, dur);
+      if (a) { writer.a = a.track; for (const s of a.samples) writer.addAudio(s.data, s.dts, s.dur); audioLabel = `${a.label}, re-encoded`; }
+    } else {
+      const pick = await pickVideoCodec(ow, oh, fps);
+      if (!pick) throw new Error('This browser cannot encode video.');
+      container = 'webm'; encCfg = pick.config; codecLabel = pick.matroska === 'V_VP9' ? 'VP9' : 'VP8';
+      writer = new WebMWriter({ width: ow, height: oh, codec: pick.matroska });
+      onProgress?.({ frac: 0, text: 'Encoding sound…' });
+      if (await encodeAudioTrack(file, dur, writer)) audioLabel = 'Opus, re-encoded';
+    }
+    const proc = new FrameProcessor(eng, gpu, user, locked, W, H, ow, oh);
+    const E = makeEncoder((chunk, meta) => (container === 'mp4' ? writer.addVideo(chunk, meta) : writer.addVideo(chunk)));
+    E.enc.configure(encCfg);
+    const total = Math.max(1, Math.floor(dur * fps + 1e-6));
+    const keyEvery = Math.max(1, Math.round(fps * 2));
+    const t0 = performance.now();
+    let seekMs = 0;
+    for (let i = 0; i < total; i++) {
+      aborted(signal);
+      const ts0 = performance.now();
+      await seekTo(v, Math.min(dur - 1e-3, (i + 0.5) / fps));
+      seekMs += performance.now() - ts0;
+      const out = proc.frame(v, i / fps, Math.round((i * 1e6) / fps), Math.round(1e6 / fps));
+      await E.push(out, i % keyEvery === 0);
+      if (i % 3 === 0 || i === total - 1) {
+        const el = (performance.now() - t0) / 1000;
+        onProgress?.({ frac: (i + 1) / total, fps: (i + 1) / el, eta: (el / (i + 1)) * (total - i - 1), text: `Frame ${i + 1} of ${total}` });
+      }
+    }
+    await E.done();
+    const blob = container === 'mp4' ? writer.finalize() : writer.finalize((total * 1000) / fps);
+    const seconds = (performance.now() - t0) / 1000;
+    return {
+      blob, ext: container,
+      info: {
+        path: 'compat', render: proc.mode, codec: codecLabel, container, audio: audioLabel, frames: total, seconds, fps: total / seconds, width: ow, height: oh,
+        msPerFrame: msPer({ seek: seekMs, ...proc.t, encodeWait: E.waitMs }, total),
+      },
+    };
+  } finally {
+    v.removeAttribute('src'); v.load(); v.remove();
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
+ * Restore a whole video.
+ * job = {file, eng, gpu, user, locked, opts:{maxShort, format:'mp4'|'webm', fps}, onProgress, signal}
+ * Resolves {blob, ext, info}.
+ */
+async function exportVideo(job) {
+  try {
+    if (job.opts.forceCompat) throw new Fallback('compatibility path requested');
+    return await exportFast(job);
+  } catch (e) {
+    if (!(e instanceof Fallback)) throw e;
+    console.info('[reefhue] compatibility path:', e.message);
+    if (/hvc1|hev1/.test(e.message)) job.codecHint = 'HEVC (H.265)';
+    else if (/av01/.test(e.message)) job.codecHint = 'AV1';
+    const r = await exportCompat(job, job.opts.fps);
+    r.info.reason = e.message;
+    return r;
+  }
+}
+
+/** Restore a photo at full resolution. Resolves {blob, ext}. */
+async function exportImage({ file, bitmap, eng, user, locked, format = 'jpeg' }) {
+  const bmp = bitmap || (await createImageBitmap(file, { imageOrientation: 'from-image' }));
+  const w = bmp.width, h = bmp.height;
+  const c = new OffscreenCanvas(w, h);
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(bmp, 0, 0);
+  const [tw, th] = thumbSize(w, h);
+  const tc = new OffscreenCanvas(tw, th);
+  const tg = tc.getContext('2d', { willReadFrequently: true });
+  tg.drawImage(bmp, 0, 0, tw, th);
+  const thumb = tg.getImageData(0, 0, tw, th).data;
+  const a = locked || { data: thumb, w: tw, h: th };
+  const auto = eng.analyze(a.data, a.w, a.h, user.red / 100, user.balance / 100);
+  const img = g.getImageData(0, 0, w, h);
+  eng.process(img.data, w, h, buildSettings(auto, user), img.data, thumb, tw, th);
+  g.putImageData(img, 0, 0);
+  const blob = await c.convertToBlob({ type: `image/${format}`, quality: 0.95 });
+  return { blob, ext: format === 'jpeg' ? 'jpg' : format, info: { width: w, height: h } };
+}
+
+return { Fallback, thumbSize, pickMp4Encoder, exportVideo, exportImage };
+})();
+const __m_demo = (() => {
+// Procedural demo material: a reef scene with a diver's colour slate, drawn in
+// true colour and then "photographed underwater" with a per-channel
+// attenuation + backscatter model. Lets the app open in a working state and
+// gives a known-good reference (the slate's whites should come back neutral).
+const { WebMWriter, pickVideoCodec } = __m_webm;
+const { Mp4Writer } = __m_mp4;
+const { pickMp4Encoder } = __m_pipeline;
+
+function rng(seed) {
+  let s = seed >>> 0;
+  return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+}
+
+// Classic colour-checker patch colours (sRGB) + a grey ramp.
+const PATCHES = ['#735244', '#c29682', '#627a9d', '#576c43', '#8580b1', '#67bdaa',
+  '#d67e2c', '#505ba6', '#c15a63', '#5e3c6c', '#9dbc40', '#e0a32e'];
+const GREYS = ['#f3f3f2', '#c8c8c8', '#a0a0a0', '#7a7a79', '#555555', '#343434'];
+
+/** Draw the scene; returns the true-colour canvas and a distance map in metres. */
+function drawReef(W, H, seed, slateX) {
+  const R = rng(seed);
+  const tc = new OffscreenCanvas(W, H);
+  const dc = new OffscreenCanvas(W, H);
+  const t = tc.getContext('2d');
+  const d = dc.getContext('2d');
+  const dist = (m) => { const v = Math.round(Math.min(20, m) / 20 * 255); return `rgb(${v},${v},${v})`; };
+  const both = (path, colour, metres) => {
+    t.fillStyle = colour; d.fillStyle = dist(metres);
+    path(t); t.fill(); path(d); d.fill();
+  };
+
+  // open water far away
+  t.fillStyle = '#24323a'; t.fillRect(0, 0, W, H);
+  d.fillStyle = dist(20); d.fillRect(0, 0, W, H);
+
+  // distant reef ridge
+  for (let i = 0; i < 9; i++) {
+    const x = R() * W, w = W * (0.12 + R() * 0.2), h = H * (0.12 + R() * 0.12);
+    both((c) => { c.beginPath(); c.ellipse(x, H * 0.62, w, h, 0, Math.PI, 0); }, ['#5d4b55', '#4f5240', '#6b5546'][i % 3], 10 + R() * 3);
+  }
+
+  // sand floor with a distance gradient (far at horizon, near at the bottom)
+  const floor = (c) => {
+    c.beginPath(); c.moveTo(0, H * 0.66);
+    for (let x = 0; x <= W; x += W / 8) c.quadraticCurveTo(x + W / 16, H * (0.62 + R() * 0.06), x + W / 8, H * 0.66);
+    c.lineTo(W, H); c.lineTo(0, H); c.closePath();
+  };
+  t.fillStyle = '#cdb68c'; floor(t); t.fill();
+  const g = d.createLinearGradient(0, H * 0.62, 0, H);
+  g.addColorStop(0, dist(9)); g.addColorStop(1, dist(1.2));
+  d.fillStyle = g; floor(d); d.fill();
+  for (let i = 0; i < 900; i++) { // sand texture
+    t.fillStyle = R() < 0.5 ? 'rgba(120,96,60,0.25)' : 'rgba(255,245,220,0.25)';
+    t.fillRect(R() * W, H * (0.66 + R() * 0.34), 2 + R() * 3, 1 + R() * 2);
+  }
+
+  // rocks
+  for (let i = 0; i < 6; i++) {
+    const x = R() * W, y = H * (0.66 + R() * 0.12), r = H * (0.06 + R() * 0.06);
+    both((c) => { c.beginPath(); c.ellipse(x, y, r * 1.6, r, 0, 0, Math.PI * 2); }, '#6b5a4a', 3.5 + R() * 2);
+  }
+
+  // brain coral domes
+  for (let i = 0; i < 4; i++) {
+    const x = W * (0.1 + R() * 0.8), y = H * 0.74, r = H * (0.07 + R() * 0.05), m = 3 + R();
+    both((c) => { c.beginPath(); c.ellipse(x, y, r * 1.4, r, 0, Math.PI, 0); c.closePath(); }, '#c98a4a', m);
+    t.strokeStyle = 'rgba(90,50,20,0.55)'; t.lineWidth = 2;
+    for (let k = 0; k < 7; k++) {
+      t.beginPath(); t.ellipse(x, y, r * 1.4 * (1 - k / 8), r * (1 - k / 8), 0, Math.PI, 0); t.stroke();
+    }
+  }
+
+  // branching corals
+  const colours = ['#e2583e', '#d94f8a', '#8c5bbf', '#f2a33a', '#e8e0d0'];
+  function branch(x, y, ang, len, w, depth, colour, m) {
+    if (depth === 0 || len < 4) return;
+    const x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len;
+    for (const [c, s] of [[t, colour], [d, dist(m)]]) {
+      c.strokeStyle = s; c.lineCap = 'round'; c.lineWidth = w;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x2, y2); c.stroke();
+    }
+    const n = 2 + (R() < 0.4 ? 1 : 0);
+    for (let i = 0; i < n; i++) branch(x2, y2, ang + (R() - 0.5) * 1.1, len * (0.68 + R() * 0.15), w * 0.72, depth - 1, colour, m);
+  }
+  for (let i = 0; i < 11; i++) {
+    const x = W * (0.03 + R() * 0.94), y = H * (0.72 + R() * 0.1);
+    branch(x, y, -Math.PI / 2 + (R() - 0.5) * 0.4, H * (0.08 + R() * 0.06), H * 0.018, 6, colours[i % colours.length], 2.6 + R() * 1.6);
+  }
+
+  // sea fan
+  for (let k = 0; k < 40; k++) {
+    const a = -Math.PI * (0.15 + 0.7 * k / 40), x0 = W * 0.18, y0 = H * 0.8, L = H * (0.25 + R() * 0.06);
+    for (const [c, s] of [[t, '#9b3a7a'], [d, dist(3)]]) {
+      c.strokeStyle = s; c.lineWidth = 2.2; c.beginPath(); c.moveTo(x0, y0);
+      c.quadraticCurveTo(x0 + Math.cos(a) * L * 0.5 + 8, y0 + Math.sin(a) * L * 0.5, x0 + Math.cos(a) * L, y0 + Math.sin(a) * L); c.stroke();
+    }
+  }
+
+  // fish
+  const fish = (x, y, s, body, stripe, m) => {
+    both((c) => { c.beginPath(); c.ellipse(x, y, s, s * 0.5, 0, 0, Math.PI * 2); }, body, m);
+    both((c) => { c.beginPath(); c.moveTo(x - s * 0.9, y); c.lineTo(x - s * 1.5, y - s * 0.45); c.lineTo(x - s * 1.5, y + s * 0.45); c.closePath(); }, body, m);
+    if (stripe) {
+      t.fillStyle = stripe;
+      for (const o of [-0.35, 0.25]) { t.beginPath(); t.ellipse(x + s * o, y, s * 0.1, s * 0.45, 0, 0, Math.PI * 2); t.fill(); }
+    }
+    t.fillStyle = '#111'; t.beginPath(); t.arc(x + s * 0.6, y - s * 0.1, s * 0.08, 0, Math.PI * 2); t.fill();
+  };
+  fish(W * 0.42, H * 0.46, H * 0.045, '#f26a1b', '#ffffff', 2.4);
+  fish(W * 0.47, H * 0.40, H * 0.03, '#f26a1b', '#ffffff', 2.6);
+  fish(W * 0.66, H * 0.33, H * 0.05, '#f4cf2f', null, 3.2);
+  fish(W * 0.30, H * 0.30, H * 0.035, '#3a5fd0', '#f4cf2f', 4);
+
+  // diver's colour slate, close to the camera
+  const sw = H * 0.42, sh = H * 0.3, sx = slateX ?? W * 0.66, sy = H * 0.6;
+  for (const [c, s] of [[t, '#f2f2ee'], [d, dist(1.1)]]) {
+    c.save(); c.translate(sx, sy); c.rotate(-0.06); c.fillStyle = s;
+    c.beginPath(); c.roundRect(0, 0, sw, sh, sw * 0.04); c.fill(); c.restore();
+  }
+  t.save(); t.translate(sx, sy); t.rotate(-0.06);
+  const pw = sw * 0.14, gap = sw * 0.02, ox = sw * 0.06, oy = sh * 0.1;
+  PATCHES.forEach((col, i) => { t.fillStyle = col; t.fillRect(ox + (i % 6) * (pw + gap), oy + Math.floor(i / 6) * (pw + gap), pw, pw); });
+  GREYS.forEach((col, i) => { t.fillStyle = col; t.strokeStyle = '#888'; t.fillRect(ox + i * (pw + gap), oy + 2 * (pw + gap), pw, pw * 0.7); t.strokeRect(ox + i * (pw + gap), oy + 2 * (pw + gap), pw, pw * 0.7); });
+  t.fillStyle = '#222'; t.font = `600 ${Math.round(sh * 0.09)}px sans-serif`;
+  t.fillText('WB SLATE · 12 m', ox, sh * 0.93);
+  t.restore();
+
+  const dd = d.getImageData(0, 0, W, H).data;
+  const metres = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) metres[i] = (dd[i * 4] / 255) * 20;
+  return { truth: t.getImageData(0, 0, W, H), metres };
+}
+
+const toLin = new Float32Array(256).map((_, i) => {
+  const c = i / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+});
+const toSrgb = (x) => {
+  x = Math.min(1, Math.max(0, x));
+  return 255 * (x <= 0.0031308 ? x * 12.92 : 1.055 * x ** (1 / 2.4) - 0.055);
+};
+
+/** Simulate a camera at `depth` metres in blue ocean water. */
+function underwater(img, metres, depth = 9, seed = 3) {
+  const R = rng(seed);
+  const beta = [0.38, 0.07, 0.045];
+  const veil = [0.012, 0.13, 0.30];
+  const n = metres.length, s = img.data;
+  const lin = new Float32Array(n * 3);
+  const lums = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const z = metres[i];
+    for (let c = 0; c < 3; c++) {
+      const T = Math.exp(-beta[c] * (depth + z));
+      lin[i * 3 + c] = toLin[s[i * 4 + c]] * T + veil[c] * (1 - Math.exp(-0.2 * z));
+    }
+    lums[i] = 0.2126 * lin[i * 3] + 0.7152 * lin[i * 3 + 1] + 0.0722 * lin[i * 3 + 2];
+  }
+  const sorted = lums.slice().sort();
+  const k = 0.82 / Math.max(1e-4, sorted[Math.floor(n * 0.995)]);
+  const out = new ImageData(img.width, img.height);
+  for (let i = 0; i < n; i++) {
+    const noise = (R() - 0.5) * 0.006;
+    for (let c = 0; c < 3; c++) out.data[i * 4 + c] = toSrgb(lin[i * 3 + c] * k + noise);
+    out.data[i * 4 + 3] = 255;
+  }
+  return out;
+}
+
+/** A 1600×1067 demo photo as a Blob (JPEG). */
+async function demoPhoto() {
+  const W = 1600, H = 1067;
+  const { truth, metres } = drawReef(W, H, 11);
+  const c = new OffscreenCanvas(W, H);
+  c.getContext('2d').putImageData(underwater(truth, metres), 0, 0);
+  return c.convertToBlob({ type: 'image/jpeg', quality: 0.92 });
+}
+
+/**
+ * A panning demo clip encoded in the browser: MP4 (H.264) when the browser
+ * can encode it, otherwise WebM. Resolves {blob, name, type}.
+ */
+async function demoClip(onProgress, { width = 1280, height = 720, seconds = 4, gop = 30 } = {}) {
+  const fw = width, fh = height, fps = 30;
+  const H = Math.max(1080, fh), W = Math.round(H * 2.37);
+  const { truth, metres } = drawReef(W, H, 5, W * 0.59);
+  const scene = new OffscreenCanvas(W, H);
+  scene.getContext('2d').putImageData(underwater(truth, metres, 10), 0, 0);
+  const mp4 = await pickMp4Encoder(fw, fh, fps, fw * fh * fps * 0.1);
+  let writer, config, ext;
+  if (mp4) {
+    writer = new Mp4Writer({ family: mp4.family, width: fw, height: fh });
+    config = mp4.config;
+    ext = 'mp4';
+  } else {
+    const pick = await pickVideoCodec(fw, fh, fps);
+    if (!pick) throw new Error('This browser cannot encode video (WebCodecs VideoEncoder missing).');
+    writer = new WebMWriter({ width: fw, height: fh, codec: pick.matroska });
+    config = pick.config;
+    ext = 'webm';
+  }
+  const enc = new VideoEncoder({ output: (ch, meta) => writer.addVideo(ch, meta), error: (e) => { throw e; } });
+  enc.configure(config);
+  const frame = new OffscreenCanvas(fw, fh);
+  const fc = frame.getContext('2d');
+  const R = rng(2);
+  const bubbles = Array.from({ length: 40 }, () => ({ x: R() * fw, y: fh + R() * fh, r: 2 + R() * 7, v: 1.5 + R() * 3 }));
+  const total = fps * seconds;
+  const cropW = H * fw / fh;
+  for (let i = 0; i < total; i++) {
+    const sx = (W - cropW) * (i / (total - 1));
+    fc.drawImage(scene, sx, 0, cropW, H, 0, 0, fw, fh);
+    fc.strokeStyle = 'rgba(200,235,255,0.55)'; fc.lineWidth = 1.5;
+    for (const b of bubbles) {
+      b.y -= b.v; b.x += Math.sin((i + b.r * 10) / 9) * 0.6;
+      if (b.y < -10) b.y = fh + 10;
+      fc.beginPath(); fc.arc(b.x, b.y, b.r, 0, Math.PI * 2); fc.stroke();
+    }
+    const vf = new VideoFrame(frame, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
+    enc.encode(vf, { keyFrame: i % gop === 0 });
+    vf.close();
+    if (enc.encodeQueueSize > 8) await new Promise((r) => setTimeout(r, 5));
+    onProgress?.(i / total);
+  }
+  await enc.flush();
+  enc.close();
+  const blob = ext === 'mp4' ? writer.finalize() : writer.finalize(seconds * 1000);
+  return { blob, name: `demo-reef-clip.${ext}`, type: ext === 'mp4' ? 'video/mp4' : 'video/webm' };
+}
+
+return { demoPhoto, demoClip };
+})();
+const __m_app = (() => {
+// Reefhue UI: drag-and-drop, live preview, quality readout, batch queue, export.
+// All analysis runs in engine.wasm (Rust) on the user's machine; exports
+// evaluate the per-pixel formula on the GPU when available (gpu.js).
+const { Engine, buildSettings, smoothAuto, PRESETS, DEFAULTS, S } = __m_engine;
+const { GpuRenderer } = __m_gpu;
+const { exportVideo, exportImage, thumbSize } = __m_pipeline;
+const { openMp4 } = __m_mp4;
+const { makeZip } = __m_zip;
+const { demoPhoto, demoClip } = __m_demo;
+
+const $ = (id) => document.getElementById(id);
+const PREVIEW_MAX = 1600; // long edge of the live preview buffer
+
+const SLIDERS = [
+  { group: 'Restore', items: [
+    { key: 'strength', label: 'Strength', min: 0, max: 100, fmt: (v) => `${v}%` },
+    { key: 'red', label: 'Red recovery', min: 0, max: 200, fmt: (v) => `${v}%`, tip: 'Rebuilds the red channel from green (Ancuti α)' },
+    { key: 'balance', label: 'Colour balance', min: 0, max: 150, fmt: (v) => `${v}%`, tip: 'Share of the measured white balance applied' },
+    { key: 'dehaze', label: 'Dehaze', min: 0, max: 200, fmt: (v) => `${v}%`, tip: 'Removes the blue-green veil of backscatter' },
+  ] },
+  { group: 'Light', items: [
+    { key: 'exposure', label: 'Exposure', min: -2, max: 2, step: 0.05, fmt: (v) => `${v > 0 ? '+' : ''}${(+v).toFixed(2)} EV` },
+    { key: 'contrast', label: 'Contrast', min: -100, max: 100 },
+    { key: 'shadows', label: 'Shadows', min: -100, max: 100 },
+    { key: 'highlights', label: 'Highlights', min: -100, max: 100 },
+  ] },
+  { group: 'Colour', items: [
+    { key: 'temp', label: 'Warmth', min: -100, max: 100 },
+    { key: 'tint', label: 'Tint', min: -100, max: 100, tip: 'Positive adds magenta, negative adds green' },
+    { key: 'saturation', label: 'Saturation', min: -100, max: 100 },
+    { key: 'vibrance', label: 'Vibrance', min: -100, max: 100 },
+  ] },
+  { group: 'Water', items: [
+    { key: 'water', label: 'Water saturation', min: -100, max: 100, tip: 'Saturation of blue and cyan water only' },
+    { key: 'waterHue', label: 'Water hue', min: -100, max: 100, tip: 'Positive turns water turquoise, negative deep blue' },
+    { key: 'waterLum', label: 'Water brightness', min: -100, max: 100, tip: 'Lighten or darken the water without touching the subject' },
+  ] },
+  { group: 'Detail', items: [
+    { key: 'clarity', label: 'Clarity', min: 0, max: 100, tip: 'Large-radius local contrast' },
+  ] },
+];
+const signed = (v) => (v > 0 ? `+${v}` : `${v}`);
+const KEYS = Object.keys(DEFAULTS);
+
+const st = {
+  eng: null, gpu: null,
+  items: [], cur: null, nextId: 1,
+  kind: null, bitmap: null,
+  srcW: 0, srcH: 0, pw: 0, ph: 0, tw: 1, th: 1, src: null, out: null, thumb: null,
+  auto: null, smooth: null, lastT: null, fps: 30,
+  view: 'split', split: 0.5, holdBefore: false,
+  beforeM: null, afterM: null,
+  batch: null, // {abort: AbortController} while processing
+  busy: false,
+};
+
+const v = $('video');
+const work = document.createElement('canvas');
+const workCtx = work.getContext('2d', { willReadFrequently: true });
+const thumbC = document.createElement('canvas');
+const thumbCtx = thumbC.getContext('2d', { willReadFrequently: true });
+const beforeCtx = $('beforeCanvas').getContext('2d');
+const afterCtx = $('afterCanvas').getContext('2d');
+const downloadsCap = window.claude?.use ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+
+// ------------------------------------------------------------------ util
+function toast(msg, ms = 4200) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => { t.hidden = true; }, ms);
+}
+function busy(text, frac) {
+  $('busy').hidden = text == null;
+  if (text != null) {
+    $('busyText').textContent = text;
+    $('busyBar').style.width = `${Math.round((frac ?? 0) * 100)}%`;
+  }
+}
+const once = (el, ev) => new Promise((res) => el.addEventListener(ev, res, { once: true }));
+const fmtTime = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;
+const fmtDur = (t) => `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}`;
+const fmtMB = (b) => (b >= 1e9 ? `${(b / 1e9).toFixed(2)} GB` : `${(b / 1e6).toFixed(b >= 1e7 ? 0 : 1)} MB`);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const presetValues = (k) => Object.fromEntries(KEYS.map((key) => [key, PRESETS[k][key] ?? DEFAULTS[key]]));
+const isVideoFile = (f) => f.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|mkv)$/i.test(f.name);
+const isImageFile = (f) => f.type.startsWith('image/') || /\.(jpe?g|png|webp|avif|gif|bmp)$/i.test(f.name);
+const baseName = (n) => n.replace(/\.[^.]+$/, '') || 'reefhue';
+
+// ----------------------------------------------------------- item model
+function isCustom(item) {
+  if (item.preset !== 'auto' || item.locked) return true;
+  const a = presetValues('auto');
+  return KEYS.some((k) => item.user[k] !== a[k]);
+}
+function chipLabel(item) {
+  if (!isCustom(item)) return 'Auto';
+  return item.preset !== 'auto' ? `${PRESETS[item.preset].label}${KEYS.some((k) => item.user[k] !== presetValues(item.preset)[k]) ? ' · edited' : ''}` : 'Custom';
+}
+function outputOpts(sel = $('qOutput').value) {
+  const [format, short] = sel.split(':');
+  return { format, maxShort: +short || null };
+}
+const signature = (item, opts) => JSON.stringify({ p: item.preset, u: item.user, l: !!item.locked, o: item.kind === 'video' ? opts : null });
+
+/** Call after any settings change on an item. */
+function itemEdited(item) {
+  if (item.status === 'done' && item.result && item.result.sig !== signature(item, item.result.opts)) {
+    item.status = 'stale';
+    item.stateText = 'Settings changed, process again';
+  } else if (item.status === 'stale' && item.result && item.result.sig === signature(item, item.result.opts)) {
+    item.status = 'done';
+    item.stateText = doneText(item.result);
+  }
+  updateItemEl(item);
+  syncThisFile();
+  syncBatchButtons();
+}
+
+function doneText(r) {
+  const parts = [fmtMB(r.blob.size)];
+  if (r.info?.fps) parts.push(`${r.info.fps.toFixed(0)} fps`);
+  return `Done · ${parts.join(' · ')}`;
+}
+
+// ---------------------------------------------------------------- sliders
+function buildUI() {
+  const host = $('sliders');
+  for (const g of SLIDERS) {
+    const sec = document.createElement('section');
+    sec.className = 'group';
+    sec.innerHTML = `<h2>${g.group}</h2>`;
+    for (const s of g.items) {
+      const row = document.createElement('div');
+      row.className = 'slider';
+      row.innerHTML = `<label for="s-${s.key}">${s.label}</label><output id="o-${s.key}" for="s-${s.key}"></output>
+        <input type="range" id="s-${s.key}" min="${s.min}" max="${s.max}" step="${s.step ?? 1}">
+        ${s.tip ? `<span class="tip">${s.tip}</span>` : ''}`;
+      const input = row.querySelector('input');
+      const changed = () => {
+        if (!st.cur) return;
+        syncSliders();
+        if (s.key === 'red' || s.key === 'balance') reanalyze();
+        requestRender();
+        itemEdited(st.cur);
+      };
+      input.addEventListener('input', () => { if (st.cur) { st.cur.user[s.key] = +input.value; changed(); } });
+      input.addEventListener('dblclick', () => { if (st.cur) { st.cur.user[s.key] = presetValues(st.cur.preset)[s.key]; changed(); } });
+      sec.append(row);
+    }
+    host.append(sec);
+  }
+  for (const [k, p] of Object.entries(PRESETS)) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'preset';
+    b.dataset.key = k;
+    b.innerHTML = `<b>${p.label}</b><small>${p.note}</small>`;
+    b.addEventListener('click', () => applyPreset(k));
+    $(p.look ? 'looks' : 'presets').append(b);
+  }
+  syncSliders();
+}
+
+function applyPreset(k) {
+  if (!st.cur) return;
+  st.cur.preset = k;
+  st.cur.user = presetValues(k);
+  syncSliders();
+  reanalyze();
+  requestRender();
+  itemEdited(st.cur);
+}
+
+function syncSliders() {
+  const item = st.cur;
+  const user = item ? item.user : DEFAULTS;
+  const base = presetValues(item ? item.preset : 'auto');
+  for (const g of SLIDERS) for (const s of g.items) {
+    const val = user[s.key];
+    $(`s-${s.key}`).value = val;
+    const o = $(`o-${s.key}`);
+    o.textContent = s.fmt ? s.fmt(val) : signed(val);
+    o.classList.toggle('changed', val !== base[s.key]);
+  }
+  const edited = KEYS.some((k) => user[k] !== base[k]);
+  for (const b of document.querySelectorAll('.preset')) {
+    const on = item && b.dataset.key === item.preset;
+    b.setAttribute('aria-pressed', !!on);
+    b.classList.toggle('modified', !!on && edited);
+  }
+}
+
+function syncThisFile() {
+  const show = st.items.length > 1 && !!st.cur;
+  $('thisFile').hidden = !show;
+  if (!show) return;
+  const chip = $('tfChip');
+  chip.textContent = chipLabel(st.cur);
+  chip.classList.toggle('custom', isCustom(st.cur));
+  $('tfAuto').disabled = !isCustom(st.cur);
+}
+
+// ---------------------------------------------------------------- layout
+function fitStage() {
+  if (!st.srcW) return { w: 0, h: 0 };
+  const wrapEl = $('stageWrap');
+  if (window.innerWidth <= 900) {
+    const w = wrapEl.clientWidth - 24;
+    wrapEl.style.height = `${Math.round(Math.min(window.innerHeight * 0.6, (w * st.srcH) / st.srcW) + 24)}px`;
+  } else wrapEl.style.height = '';
+  const wrap = wrapEl.getBoundingClientRect();
+  const pad = 24;
+  const sc = Math.min((wrap.width - pad) / st.srcW, (wrap.height - pad) / st.srcH);
+  const stage = $('stage');
+  stage.style.width = `${Math.max(1, Math.floor(st.srcW * sc))}px`;
+  stage.style.height = `${Math.max(1, Math.floor(st.srcH * sc))}px`;
+  return { w: st.srcW * sc, h: st.srcH * sc };
+}
+
+function layoutPreview() {
+  const disp = fitStage();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const want = Math.min(PREVIEW_MAX, Math.max(480, Math.max(disp.w, disp.h) * dpr));
+  const sc = Math.min(1, want / Math.max(st.srcW, st.srcH));
+  st.pw = Math.max(1, Math.round(st.srcW * sc));
+  st.ph = Math.max(1, Math.round(st.srcH * sc));
+  for (const c of [work, $('beforeCanvas'), $('afterCanvas')]) { c.width = st.pw; c.height = st.ph; }
+  [st.tw, st.th] = thumbSize(st.srcW, st.srcH);
+  thumbC.width = st.tw;
+  thumbC.height = st.th;
+  st.out = new ImageData(st.pw, st.ph);
+}
+
+function grab(source) {
+  workCtx.drawImage(source, 0, 0, st.pw, st.ph);
+  st.src = workCtx.getImageData(0, 0, st.pw, st.ph);
+  beforeCtx.putImageData(st.src, 0, 0);
+  thumbCtx.drawImage(source, 0, 0, st.tw, st.th);
+  st.thumb = thumbCtx.getImageData(0, 0, st.tw, st.th).data;
+}
+
+// --------------------------------------------------------------- analysis
+function analyzeNow(newFrame, t) {
+  const item = st.cur;
+  const a = item.locked || { data: st.thumb, w: st.tw, h: st.th };
+  const raw = st.eng.analyze(a.data, a.w, a.h, item.user.red / 100, item.user.balance / 100);
+  if (!newFrame) { st.smooth = raw; st.lastT = t; st.auto = raw; return; }
+  st.auto = smoothAuto(raw, t, st);
+}
+
+function reanalyze(newFrame = false) {
+  if (!st.thumb || !st.cur) return;
+  analyzeNow(newFrame && st.kind === 'video' && !v.paused, st.kind === 'video' ? v.currentTime : 0);
+  showAuto();
+}
+
+function showAuto() {
+  const a = st.auto;
+  if (!a) return;
+  $('autoWater').textContent = a[S.GREEN_WATER] > 0.5 ? 'Green' : 'Blue';
+  $('autoRed').textContent = `${Math.round((a[S.MEAN] / Math.max(1e-3, a[S.MEAN + 1])) * 100)} %`;
+  const lift = a[S.GAIN] / Math.max(0.05, a[S.WHITE] - a[S.BLACK]);
+  $('autoGain').textContent = `×${lift.toFixed(1)}`;
+}
+
+// ---------------------------------------------------------------- render
+let queued = false;
+function requestRender() {
+  if (queued) return;
+  queued = true;
+  requestAnimationFrame(() => { queued = false; render(); });
+}
+
+function render() {
+  if (!st.src || !st.auto || !st.cur) return;
+  st.eng.process(st.src.data, st.pw, st.ph, buildSettings(st.auto, st.cur.user), st.out.data, st.thumb, st.tw, st.th);
+  afterCtx.putImageData(st.out, 0, 0);
+  scheduleMetrics();
+}
+
+let metricsTimer = 0;
+let lastMetrics = 0;
+function scheduleMetrics() {
+  clearTimeout(metricsTimer);
+  const playing = st.kind === 'video' && !v.paused;
+  const wait = playing ? Math.max(0, 250 - (performance.now() - lastMetrics)) : 120;
+  metricsTimer = setTimeout(() => {
+    if (!st.src) return;
+    lastMetrics = performance.now();
+    st.beforeM = st.eng.metrics(st.src.data, st.pw, st.ph, 60000);
+    st.afterM = st.eng.metrics(st.out.data, st.pw, st.ph, 60000);
+    drawReadout();
+  }, wait);
+}
+
+// --------------------------------------------------------------- readout
+const CSS = getComputedStyle(document.documentElement);
+const tok = (n) => CSS.getPropertyValue(n).trim();
+
+function castName(a, b) {
+  const h = ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
+  const names = ['red', 'orange', 'yellow', 'yellow-green', 'green', 'cyan', 'blue', 'magenta'];
+  return names[Math.floor(((h + 22.5) % 360) / 45)];
+}
+
+function drawCast() {
+  const c = $('castPlot');
+  const g = c.getContext('2d');
+  const W = c.width, cx = W / 2, R = W / 2 - 14, unit = R / 40;
+  g.clearRect(0, 0, W, W);
+  for (let i = 0; i < 72; i++) {
+    const a0 = (i / 72) * Math.PI * 2, a1 = ((i + 1) / 72) * Math.PI * 2;
+    g.strokeStyle = `hsl(${(380 - (i * 5)) % 360} 70% 55% / 0.85)`;
+    g.lineWidth = 5;
+    g.beginPath(); g.arc(cx, cx, R + 6, -a1, -a0); g.stroke();
+  }
+  g.strokeStyle = tok('--line'); g.lineWidth = 1;
+  for (const r of [10, 20, 40]) { g.beginPath(); g.arc(cx, cx, r * unit, 0, Math.PI * 2); g.stroke(); }
+  g.beginPath(); g.moveTo(cx - R, cx); g.lineTo(cx + R, cx); g.moveTo(cx, cx - R); g.lineTo(cx, cx + R); g.stroke();
+  g.fillStyle = tok('--muted'); g.font = `500 13px ${tok('--font-display')}`;
+  g.fillText('+b*', cx + 4, 26); g.fillText('−b*', cx + 4, W - 18); g.fillText('+a*', W - 40, cx - 5); g.fillText('−a*', 18, cx - 5);
+  const pt = (m) => {
+    const d = Math.hypot(m.a, m.b), k = d > 40 ? 40 / d : 1;
+    return [cx + m.a * k * unit, cx - m.b * k * unit];
+  };
+  if (!st.beforeM) return;
+  const [bx, by] = pt(st.beforeM), [ax, ay] = pt(st.afterM);
+  g.strokeStyle = tok('--muted'); g.setLineDash([3, 3]);
+  g.beginPath(); g.moveTo(bx, by); g.lineTo(ax, ay); g.stroke(); g.setLineDash([]);
+  g.lineWidth = 2; g.strokeStyle = tok('--ink');
+  g.beginPath(); g.arc(bx, by, 6, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = tok('--red'); g.strokeStyle = tok('--ground');
+  g.beginPath(); g.arc(ax, ay, 7, 0, Math.PI * 2); g.fill(); g.stroke();
+}
+
+function drawHist() {
+  const c = $('histPlot');
+  const g = c.getContext('2d');
+  const W = c.width, H = c.height, half = H / 2 - 4;
+  g.clearRect(0, 0, W, H);
+  const cols = ['rgb(255 84 70 / 0.8)', 'rgb(80 212 112 / 0.8)', 'rgb(72 132 255 / 0.85)'];
+  const draw = (hist, top) => {
+    let mx = 1;
+    for (let ch = 0; ch < 3; ch++) for (let i = 2; i < 254; i++) mx = Math.max(mx, hist[ch * 256 + i]);
+    g.globalCompositeOperation = 'lighter';
+    for (let ch = 0; ch < 3; ch++) {
+      g.fillStyle = cols[ch];
+      g.beginPath(); g.moveTo(0, top + half);
+      for (let i = 0; i < 256; i++) g.lineTo((i / 255) * W, top + half - Math.min(1, hist[ch * 256 + i] / mx) * (half - 2));
+      g.lineTo(W, top + half); g.closePath(); g.fill();
+    }
+    g.globalCompositeOperation = 'source-over';
+  };
+  g.fillStyle = tok('--ground'); g.fillRect(0, 0, W, half); g.fillRect(0, half + 8, W, half);
+  if (!st.beforeM) return;
+  draw(st.beforeM.hist, 0);
+  draw(st.afterM.hist, half + 8);
+}
+
+function drawReadout() {
+  drawCast();
+  drawHist();
+  const b = st.beforeM, a = st.afterM;
+  const rows = [
+    ['Highlight cast', '<abbr title="Tint of the brightest 20 % of the frame (sand, skin, slate, foam) as distance from neutral grey on the CIE a*b* plane. Open water may stay blue. Lower is better.">ΔE</abbr>', b.cast, a.cast, -1, 1],
+    ['Colourfulness', '<abbr title="Hasler–Süsstrunk colourfulness M. Higher means more colour variety.">M</abbr>', b.colorfulness, a.colorfulness, 1, 0],
+    ['Contrast', '<abbr title="Standard deviation of lightness L*.">σL*</abbr>', b.stdL, a.stdL, 1, 1],
+    ['Tonal range', '<abbr title="L* span between the 1st and 99th percentile.">L* 1–99%</abbr>', b.rangeL, a.rangeL, 1, 0],
+    ['UCIQE', '<abbr title="Underwater colour image quality evaluation (Yang & Sowmya 2015): chroma spread, lightness contrast and saturation. Higher is better.">score</abbr>', b.uciqe, a.uciqe, 1, 2],
+    ['Clipped', '<abbr title="Pixels at pure black or white in any channel.">pixels</abbr>', b.clipped * 100, a.clipped * 100, -1, 1, '%'],
+  ];
+  $('metricRows').innerHTML = rows.map(([name, unit, x, y, dir, dp, suf = '']) => {
+    const better = (y - x) * dir > (dp === 2 ? 0.005 : 0.5);
+    const worse = (y - x) * dir < -(dp === 2 ? 0.005 : 0.5);
+    return `<tr><td>${name} <small>${unit}</small></td><td>${x.toFixed(dp)}${suf}</td><td class="${better ? 'up' : worse ? 'down' : ''}">${y.toFixed(dp)}${suf}</td></tr>`;
+  }).join('');
+
+  const pill = $('verdict').querySelector('.pill');
+  const text = $('verdict').querySelector('.vtext');
+  let cls = 'good', label = 'Neutral', note = 'Highlights are neutral.';
+  if (a.cast >= 12) { cls = 'bad'; label = `Strong ${castName(a.a, a.b)} cast`; note = 'Raise Red recovery or Colour balance, or try a deeper preset.'; }
+  else if (a.cast >= 5) { cls = 'warn'; label = `Slight ${castName(a.a, a.b)} cast`; note = 'Fine for water-heavy shots; trim with Warmth or Tint.'; }
+  if (PRESETS[st.cur?.preset]?.look) note = 'Looks are styles: a tint can be intended.';
+  if (a.clipped > 0.02) { cls = cls === 'good' ? 'warn' : cls; note = `${(a.clipped * 100).toFixed(1)} % of pixels clipped. Lower Exposure, Contrast or Dehaze.`; }
+  pill.className = `pill ${cls}`;
+  pill.textContent = label;
+  const du = a.uciqe - b.uciqe;
+  text.textContent = `${note} UCIQE ${du >= 0 ? '+' : ''}${du.toFixed(3)} vs original.`;
+}
+
+// ------------------------------------------------------------- view mode
+function setView(mode) {
+  st.view = mode;
+  for (const [id, m] of [['viewSplit', 'split'], ['viewAfter', 'after'], ['viewBefore', 'before']]) {
+    $(id).classList.toggle('on', m === mode);
+    $(id).setAttribute('aria-pressed', m === mode);
+  }
+  applyView();
+}
+function applyView() {
+  const mode = st.holdBefore ? 'before' : st.view;
+  $('stage').className = `stage view-${mode}`;
+  $('afterCanvas').style.clipPath = mode === 'split' ? `inset(0 0 0 ${st.split * 100}%)` : 'none';
+  $('handle').style.left = `${st.split * 100}%`;
+}
+
+function bindStage() {
+  const stage = $('stage');
+  let drag = false;
+  const move = (e) => {
+    const r = stage.getBoundingClientRect();
+    st.split = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    applyView();
+  };
+  stage.addEventListener('pointerdown', (e) => {
+    if (st.view !== 'split') return;
+    drag = true; stage.setPointerCapture(e.pointerId); move(e);
+  });
+  stage.addEventListener('pointermove', (e) => { if (drag) move(e); });
+  stage.addEventListener('pointerup', () => { drag = false; });
+  stage.addEventListener('pointercancel', () => { drag = false; });
+  $('viewSplit').onclick = () => setView('split');
+  $('viewAfter').onclick = () => setView('after');
+  $('viewBefore').onclick = () => setView('before');
+  window.addEventListener('keydown', (e) => {
+    if (e.target.closest('input, select, textarea') && e.target.type !== 'range') return;
+    if (e.key === 'b' || e.key === 'B') { if (!st.holdBefore) { st.holdBefore = true; applyView(); } }
+    if (st.kind === 'video' && e.target.type !== 'range') {
+      if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+      if (e.key === 'ArrowRight') stepFrame(1);
+      if (e.key === 'ArrowLeft') stepFrame(-1);
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'b' || e.key === 'B') { st.holdBefore = false; applyView(); }
+  });
+}
+
+// ------------------------------------------------------------- queue
+function addFiles(list) {
+  const files = [...list].filter((f) => isVideoFile(f) || isImageFile(f));
+  const skipped = list.length - files.length;
+  if (skipped) toast(`${skipped} file${skipped > 1 ? 's' : ''} skipped: not a photo or video.`);
+  if (!files.length) return [];
+  // the demo placeholder makes way for the user's own files
+  if (st.items.length === 1 && st.items[0].demo && st.items[0].status === 'ready') st.items = [];
+  const added = files.map((file) => ({
+    id: st.nextId++, file, name: file.name, kind: isVideoFile(file) ? 'video' : 'image', size: file.size,
+    w: 0, h: 0, duration: 0, fps: 0, thumbUrl: '',
+    preset: 'auto', user: presetValues('auto'), locked: null,
+    status: 'ready', progress: 0, stateText: 'Ready', result: null,
+  }));
+  st.items.push(...added);
+  renderQueue();
+  probeAll(added);
+  // open the first new file, unless a batch is running and the user is looking at another one
+  if (!st.cur || !st.items.includes(st.cur) || !st.batch) selectItem(added[0]);
+  return added;
+}
+
+async function probeAll(items) {
+  for (const item of items) {
+    try { await probe(item); } catch (e) { console.warn('probe', item.name, e); }
+    updateItemEl(item);
+  }
+}
+
+async function probe(item) {
+  const c = document.createElement('canvas');
+  c.width = 112; c.height = 84;
+  const g = c.getContext('2d');
+  const cover = (src, w, h) => {
+    const k = Math.max(112 / w, 84 / h);
+    g.drawImage(src, (112 - w * k) / 2, (84 - h * k) / 2, w * k, h * k);
+  };
+  if (item.kind === 'image') {
+    const bmp = await createImageBitmap(item.file, { imageOrientation: 'from-image' });
+    item.w = bmp.width; item.h = bmp.height;
+    cover(bmp, bmp.width, bmp.height);
+    bmp.close?.();
+  } else {
+    let codec = null;
+    try {
+      const d = await openMp4(item.file);
+      if (d.video) {
+        item.fps = Math.round((d.video.samples.count / Math.max(d.video.duration, 1e-3)) * 100) / 100;
+        codec = d.video.family;
+      }
+    } catch { /* not MP4: fps from playback later */ }
+    const tv = document.createElement('video');
+    tv.muted = true; tv.playsInline = true; tv.preload = 'auto';
+    const url = URL.createObjectURL(item.file);
+    tv.src = url;
+    try {
+      await Promise.race([once(tv, 'loadeddata'), once(tv, 'error').then(() => { throw new Error('cannot play'); })]);
+      item.w = tv.videoWidth; item.h = tv.videoHeight; item.duration = tv.duration;
+      if (!item.w) throw new Error('no video');
+      tv.currentTime = Math.min(1, (tv.duration || 0) / 3);
+      await Promise.race([once(tv, 'seeked'), new Promise((r) => setTimeout(r, 1500))]);
+      cover(tv, tv.videoWidth, tv.videoHeight);
+    } catch {
+      item.status = 'error';
+      item.stateText = codec === 'hevc' ? 'This browser cannot decode HEVC (H.265)'
+        : codec === 'av1' ? 'This browser cannot decode AV1' : 'This browser cannot play this file';
+      item.unplayable = true;
+    } finally {
+      tv.removeAttribute('src'); tv.load();
+      URL.revokeObjectURL(url);
+    }
+  }
+  item.thumbUrl = c.toDataURL('image/jpeg', 0.8);
+}
+
+function itemMeta(item) {
+  const p = [];
+  if (item.kind === 'video' && item.duration) p.push(fmtDur(item.duration));
+  if (item.w) p.push(`${item.w}×${item.h}`);
+  p.push(fmtMB(item.size));
+  return p.join(' · ');
+}
+
+function itemHTML(item) {
+  const custom = isCustom(item);
+  return `<button type="button" class="q-main" data-act="select">
+      <img class="q-thumb" alt="" src="${item.thumbUrl || 'data:image/gif;base64,R0lGODlhAQABAAAAACw='}">
+      <span class="q-name" title="${esc(item.name)}">${esc(item.name)}</span>
+      <span class="q-meta">${esc(itemMeta(item))}</span>
+      <span class="q-line"><span class="q-chip${custom ? ' custom' : ''}">${esc(chipLabel(item))}</span><span class="q-state">${esc(item.stateText)}</span></span>
+      <i class="q-bar" style="--p:${(item.progress * 100).toFixed(1)}%"></i>
+    </button>
+    <button type="button" class="q-x" data-act="remove" aria-label="Remove ${esc(item.name)}" title="Remove">×</button>
+    ${item.result && item.status !== 'processing' ? `<button type="button" class="q-dl" data-act="download" aria-label="Download ${esc(item.name)}" title="Download">↓</button>` : ''}`;
+}
+
+function renderQueue() {
+  const show = st.items.length > 1;
+  $('queue').hidden = !show;
+  $('app').classList.toggle('has-queue', show);
+  const list = $('qList');
+  list.innerHTML = '';
+  for (const item of st.items) {
+    const li = document.createElement('li');
+    li.className = 'q-item';
+    li.dataset.id = item.id;
+    li.dataset.status = item.status;
+    li.setAttribute('aria-current', item === st.cur ? 'true' : 'false');
+    li.innerHTML = itemHTML(item);
+    list.append(li);
+  }
+  syncBatchButtons();
+  syncThisFile();
+  if (show !== renderQueue.was) { renderQueue.was = show; if (st.srcW) setTimeout(relayout, 0); }
+}
+
+function updateItemEl(item) {
+  const li = $('qList').querySelector(`[data-id="${item.id}"]`);
+  if (!li) return;
+  li.dataset.status = item.status;
+  li.setAttribute('aria-current', item === st.cur ? 'true' : 'false');
+  li.innerHTML = itemHTML(item);
+}
+
+function syncBatchButtons() {
+  const vids = st.items;
+  const done = vids.filter((i) => i.status === 'done').length;
+  const todo = vids.filter((i) => i.status !== 'done' && i.status !== 'processing' && !i.unplayable).length;
+  const total = vids.reduce((a, i) => a + i.size, 0);
+  $('qCount').textContent = `${vids.length} files · ${fmtMB(total)}`;
+  const pb = $('qProcess');
+  if (st.batch) { pb.textContent = 'Stop'; pb.disabled = false; pb.classList.remove('primary'); }
+  else {
+    pb.textContent = todo ? `Process ${todo === vids.length ? 'all' : todo} ${todo === 1 ? 'file' : 'files'}` : 'All processed';
+    pb.disabled = !todo;
+    pb.classList.toggle('primary', !!todo);
+  }
+  $('qZip').disabled = !done || !!st.batch;
+  $('qZip').textContent = done && done < vids.length ? `Download ${done} done (.zip)` : 'Download all (.zip)';
+  if (!st.batch) {
+    const stale = vids.filter((i) => i.status === 'stale').length;
+    const err = vids.filter((i) => i.status === 'error').length;
+    const bits = [];
+    if (done) bits.push(`${done} done`);
+    if (stale) bits.push(`${stale} changed since processing`);
+    if (err) bits.push(`${err} failed`);
+    $('qStatus').textContent = bits.length ? bits.join(' · ') : 'Every file uses Auto unless you change its settings. Click a file to preview and adjust it.';
+  }
+  $('exportBtn').disabled = !st.cur;
+}
+
+function removeItem(item) {
+  if (item.status === 'processing') { toast('This file is being processed. Stop the batch first.'); return; }
+  const i = st.items.indexOf(item);
+  st.items.splice(i, 1);
+  if (st.cur === item) {
+    const next = st.items[Math.min(i, st.items.length - 1)];
+    if (next) selectItem(next);
+    else { st.cur = null; stopVideo(); clearPreview(); }
+  }
+  renderQueue();
+}
+
+function clearPreview() {
+  st.src = null; st.srcW = 0;
+  beforeCtx.clearRect(0, 0, 9999, 9999); afterCtx.clearRect(0, 0, 9999, 9999);
+  $('fileName').textContent = 'Add photos or videos to start';
+  $('fileMeta').textContent = '';
+  $('transport').hidden = true;
+}
+
+async function selectItem(item) {
+  if (!item) return;
+  st.cur = item;
+  for (const li of $('qList').children) li.setAttribute('aria-current', li.dataset.id === String(item.id) ? 'true' : 'false');
+  syncSliders();
+  syncThisFile();
+  $('lockAuto').checked = !!item.locked;
+  if (item.unplayable) { stopVideo(); clearPreview(); $('fileName').textContent = item.name; $('fileMeta').textContent = item.stateText; return; }
+  try {
+    if (item.kind === 'video') await loadVideo(item);
+    else await loadImage(item);
+  } catch (err) {
+    console.error(err);
+    if (st.cur === item) toast(`Could not open ${item.name}: ${err.message || err}. This browser may not decode that format.`);
+  }
+}
+
+// ------------------------------------------------------------- loading
+function setFileLabel() {
+  const item = st.cur;
+  $('fileName').textContent = item.name;
+  const extra = st.kind === 'video' ? ` · ${fmtTime(v.duration)} · ${(+st.fps).toFixed(st.fps % 1 ? 2 : 0)} fps` : '';
+  $('fileMeta').textContent = `${st.srcW}×${st.srcH}${extra}`;
+  $('exportBtn').disabled = false;
+}
+
+async function loadImage(item) {
+  const bmp = await createImageBitmap(item.file, { imageOrientation: 'from-image' });
+  if (st.cur !== item) return;
+  stopVideo();
+  st.kind = 'image'; st.bitmap = bmp;
+  st.srcW = bmp.width; st.srcH = bmp.height; st.smooth = null;
+  $('transport').hidden = true;
+  $('lockRow').hidden = true;
+  layoutPreview();
+  grab(bmp);
+  reanalyze();
+  render();
+  setFileLabel();
+}
+
+function stopVideo() {
+  if (v.src) { v.pause(); URL.revokeObjectURL(v.src); v.removeAttribute('src'); v.load(); }
+}
+
+async function estimateFps() {
+  if (!('requestVideoFrameCallback' in HTMLVideoElement.prototype)) return 30;
+  const times = [];
+  await new Promise((res) => {
+    const cb = (_, md) => {
+      times.push(md.mediaTime);
+      if (times.length < 14 && !v.ended) v.requestVideoFrameCallback(cb); else res();
+    };
+    v.requestVideoFrameCallback(cb);
+    v.play().catch(res);
+    setTimeout(res, 1500);
+  });
+  v.pause();
+  const d = [];
+  for (let i = 1; i < times.length; i++) if (times[i] > times[i - 1]) d.push(times[i] - times[i - 1]);
+  if (!d.length) return 30;
+  d.sort((a, b) => a - b);
+  const fps = 1 / d[Math.floor(d.length / 4)];
+  const common = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 120];
+  return common.reduce((best, c) => (Math.abs(c - fps) < Math.abs(best - fps) ? c : best), 30);
+}
+
+async function loadVideo(item) {
+  stopVideo();
+  v.muted = true;
+  v.src = URL.createObjectURL(item.file);
+  await Promise.race([once(v, 'loadeddata'), once(v, 'error').then(() => { throw new Error('unsupported video'); })]);
+  if (st.cur !== item) return;
+  if (!Number.isFinite(v.duration)) {
+    v.currentTime = 1e9; await once(v, 'durationchange'); v.currentTime = 0; await once(v, 'seeked');
+  }
+  st.kind = 'video'; st.bitmap = null;
+  st.srcW = v.videoWidth; st.srcH = v.videoHeight; st.smooth = null;
+  st.fps = item.fps || (item.fps = await estimateFps());
+  await seekTo(0);
+  if (st.cur !== item) return;
+  layoutPreview();
+  grab(v);
+  reanalyze();
+  render();
+  $('transport').hidden = false;
+  $('lockRow').hidden = false;
+  setMuted(true);
+  updateTime();
+  setFileLabel();
+}
+
+function relayout() {
+  if (!st.cur || !st.srcW) return;
+  layoutPreview();
+  grab(st.kind === 'image' ? st.bitmap : v);
+  reanalyze();
+  render();
+}
+
+// ------------------------------------------------------------- video
+function onFrame(_, md) {
+  if (st.kind !== 'video' || !st.cur) return;
+  grab(v);
+  analyzeNow(true, md?.mediaTime ?? v.currentTime);
+  showAuto();
+  render();
+  updateTime();
+  if (!v.paused && !v.ended) v.requestVideoFrameCallback(onFrame);
+}
+function frameLoop() {
+  if ('requestVideoFrameCallback' in v) v.requestVideoFrameCallback(onFrame);
+  else {
+    const tick = () => { if (!v.paused) { onFrame(); requestAnimationFrame(tick); } };
+    requestAnimationFrame(tick);
+  }
+}
+function togglePlay() {
+  if (v.paused) { v.play(); frameLoop(); } else v.pause();
+}
+v.addEventListener('play', () => { $('playBtn').textContent = '❚❚'; $('playBtn').setAttribute('aria-label', 'Pause'); });
+v.addEventListener('pause', () => { $('playBtn').textContent = '▶'; $('playBtn').setAttribute('aria-label', 'Play'); });
+v.addEventListener('seeked', () => {
+  if (st.kind !== 'video' || !v.paused || !st.cur) return;
+  grab(v); reanalyze(); render(); updateTime();
+});
+function stepFrame(n) {
+  v.pause();
+  v.currentTime = Math.min(v.duration, Math.max(0, v.currentTime + n / st.fps));
+}
+function updateTime() {
+  $('timeLabel').textContent = `${fmtTime(v.currentTime)} / ${fmtTime(v.duration || 0)}`;
+  if (document.activeElement !== $('scrub')) $('scrub').value = Math.round((v.currentTime / (v.duration || 1)) * 1000);
+}
+function setMuted(m) {
+  v.muted = m;
+  $('muteBtn').setAttribute('aria-pressed', m);
+  $('muteBtn').textContent = m ? 'Sound off' : 'Sound on';
+}
+
+/** Seek and wait until the new frame is actually presented. */
+function seekTo(t) {
+  return new Promise((res) => {
+    let gotFrame = !('requestVideoFrameCallback' in v), gotSeek = false, h = 0;
+    const check = () => { if (gotFrame && gotSeek) res(); };
+    if (!gotFrame) h = v.requestVideoFrameCallback(() => { gotFrame = true; check(); });
+    v.addEventListener('seeked', () => {
+      gotSeek = true; check();
+      setTimeout(() => { if (!gotFrame) { v.cancelVideoFrameCallback(h); gotFrame = true; check(); } }, 150);
+    }, { once: true });
+    v.currentTime = t;
+  });
+}
+
+// ------------------------------------------------------------- export
+async function saveBlob(blob, filename) {
+  const dl = await downloadsCap;
+  if (dl) {
+    try {
+      await dl.save({ filename, data: blob });
+      return true;
+    } catch (e) {
+      if (e?.code === 'declined') return false;
+      if (!['unavailable', 'not_granted', 'capability_disabled', 'capability_removed'].includes(e?.code)) throw new Error(e?.message || 'save failed');
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  return true;
+}
+
+/** Process one item with the given output options; stores and returns the result. */
+async function processItem(item, opts, onProgress, signal) {
+  const user = { ...item.user };
+  const sig = signature(item, opts);
+  let r;
+  if (item.kind === 'image') {
+    const fmt = opts.imageFormat || (/png$/i.test(item.file.type) ? 'png' : 'jpeg');
+    onProgress?.({ frac: 0.5, text: 'Processing photo…' });
+    r = await exportImage({ file: item.file, eng: st.eng, user, locked: item.locked, format: fmt });
+  } else {
+    r = await exportVideo({
+      file: item.file, eng: st.eng, gpu: st.gpu, user, locked: item.locked,
+      opts: { format: opts.format, maxShort: opts.maxShort, fps: item.fps || 30 }, onProgress, signal,
+    });
+  }
+  item.result = { blob: r.blob, name: `${baseName(item.name)}-reefhue.${r.ext}`, info: r.info, sig, opts };
+  item.status = item.result.sig === signature(item, opts) ? 'done' : 'stale';
+  item.progress = 1;
+  item.stateText = item.status === 'done' ? doneText(item.result) : 'Settings changed, process again';
+  return item.result;
+}
+
+function progressText(p) {
+  if (p.eta != null && p.fps) return `${Math.round(p.frac * 100)}% · ${p.fps.toFixed(0)} fps · ${Math.ceil(p.eta)} s left`;
+  return p.text || `${Math.round((p.frac || 0) * 100)}%`;
+}
+
+async function runBatch() {
+  if (st.batch) { st.batch.abort.abort(); return; }
+  const opts = outputOpts();
+  const todo = st.items.filter((i) => i.status !== 'done' && !i.unplayable);
+  if (!todo.length) return;
+  st.batch = { abort: new AbortController() };
+  for (const i of todo) { i.status = 'queued'; i.stateText = 'Waiting'; i.progress = 0; updateItemEl(i); }
+  syncBatchButtons();
+  const t0 = performance.now();
+  let ok = 0, failed = 0, n = 0;
+  for (const item of todo) {
+    if (st.batch.abort.signal.aborted) break;
+    if (!st.items.includes(item)) continue;
+    n++;
+    item.status = 'processing'; item.stateText = 'Starting…'; item.progress = 0;
+    updateItemEl(item);
+    $('qStatus').textContent = `Processing ${n} of ${todo.length}: ${item.name}`;
+    let lastPaint = 0;
+    try {
+      await processItem(item, opts, (p) => {
+        item.progress = p.frac || 0;
+        item.stateText = progressText(p);
+        const now = performance.now();
+        if (now - lastPaint > 200) { lastPaint = now; updateItemEl(item); }
+      }, st.batch.abort.signal);
+      ok++;
+    } catch (e) {
+      if (e?.name === 'AbortError') { item.status = 'ready'; item.stateText = 'Stopped'; item.progress = 0; }
+      else { console.error(e); item.status = 'error'; item.stateText = `Failed: ${e.message || e}`; failed++; }
+    }
+    updateItemEl(item);
+  }
+  for (const i of st.items) if (i.status === 'queued') { i.status = i.result ? 'stale' : 'ready'; i.stateText = i.result ? 'Settings changed, process again' : 'Ready'; updateItemEl(i); }
+  const stopped = st.batch.abort.signal.aborted;
+  st.batch = null;
+  syncBatchButtons();
+  const secs = Math.round((performance.now() - t0) / 1000);
+  $('qStatus').textContent = `${stopped ? 'Stopped. ' : ''}${ok} processed${failed ? `, ${failed} failed` : ''} in ${fmtDur(secs)}.`;
+  if (ok && !stopped) toast(`Batch done: ${ok} file${ok > 1 ? 's' : ''} ready. Use Download all.`);
+}
+
+async function downloadAll() {
+  const done = st.items.filter((i) => i.status === 'done' && i.result);
+  if (!done.length) return;
+  const zb = $('qZip');
+  zb.disabled = true;
+  try {
+    $('qStatus').textContent = 'Packing zip…';
+    const zip = await makeZip(done.map((i) => ({ name: i.result.name, blob: i.result.blob })), (f) => {
+      $('qStatus').textContent = `Packing zip… ${Math.round(f * 100)}%`;
+    });
+    const d = new Date();
+    const name = `reefhue-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.zip`;
+    if (await saveBlob(zip, name)) toast(`Saved ${name} (${done.length} files, ${fmtMB(zip.size)})`);
+  } catch (e) {
+    toast(`Could not save the zip: ${e.message || e}`);
+  } finally {
+    syncBatchButtons();
+  }
+}
+
+// ------------------------------------------------------------- export sheet
+let sheetAbort = null;
+function videoSizes() {
+  const even = (x) => Math.max(2, Math.round(x / 2) * 2);
+  const out = [{ label: `Original · ${st.srcW}×${st.srcH}`, short: 0 }];
+  for (const target of [2160, 1080, 720]) {
+    const short = Math.min(st.srcW, st.srcH);
+    if (short > target) {
+      const k = target / short;
+      out.push({ label: `${target}p · ${even(st.srcW * k)}×${even(st.srcH * k)}`, short: target });
+    }
+  }
+  return out;
+}
+
+function openSheet() {
+  const item = st.cur;
+  if (!item) return;
+  $('exportErr').hidden = true;
+  $('exportProgress').hidden = true;
+  $('sheetGo').disabled = false;
+  const isVideo = item.kind === 'video';
+  $('sheetImage').hidden = isVideo;
+  $('sheetVideo').hidden = !isVideo;
+  const fresh = item.status === 'done' && item.result;
+  $('sheetGo').textContent = fresh ? `Download ${fmtMB(item.result.blob.size)}` : 'Process and download';
+  if (isVideo) {
+    const sel = $('vidRes');
+    sel.innerHTML = videoSizes().map((s) => `<option value="${s.short}">${s.label}</option>`).join('');
+    const o = outputOpts();
+    sel.value = String(o.maxShort || 0);
+    if (sel.selectedIndex < 0) sel.selectedIndex = 0;
+    $('vidFormat').value = o.format;
+    const frames = Math.round((v.duration || item.duration) * (item.fps || st.fps));
+    $('vidNote').textContent = fresh
+      ? `Already processed: ${item.result.info.codec}, ${item.result.info.width}×${item.result.info.height}, sound ${item.result.info.audio}.`
+      : `${frames} frames are restored on this device: decoded with WebCodecs, colour-corrected by the Rust engine${st.gpu ? ' on the GPU' : ''}, then encoded. Keep this tab open while it runs.`;
+  } else {
+    $('imgFormat').value = /png$/i.test(item.file.type) ? 'png' : 'jpeg';
+    $('imgNote').textContent = `Full resolution, ${st.srcW}×${st.srcH} px. Processed locally; the file never leaves this device. Camera metadata (EXIF) is not copied.`;
+  }
+  const changeOpt = () => {
+    if (item.status === 'done') $('sheetGo').textContent = 'Process and download';
+  };
+  $('vidRes').onchange = changeOpt;
+  $('vidFormat').onchange = changeOpt;
+  $('imgFormat').onchange = changeOpt;
+  $('sheet').hidden = false;
+}
+
+async function runSheet() {
+  const item = st.cur;
+  const go = $('sheetGo');
+  go.disabled = true;
+  $('exportErr').hidden = true;
+  const prog = (p) => {
+    $('exportProgress').hidden = false;
+    $('exportBar').style.width = `${((p.frac || 0) * 100).toFixed(1)}%`;
+    $('exportText').textContent = p.eta != null && p.fps ? `${p.text} · ${p.fps.toFixed(1)} fps · about ${Math.ceil(p.eta)} s left` : p.text || '';
+    item.progress = p.frac || 0;
+  };
+  try {
+    let res = item.result;
+    const wantNew = go.textContent.startsWith('Process');
+    if (wantNew) {
+      if (item.status === 'processing') throw new Error('This file is already being processed in the batch.');
+      const opts = item.kind === 'video'
+        ? { format: $('vidFormat').value, maxShort: +$('vidRes').value || null }
+        : { imageFormat: $('imgFormat').value };
+      sheetAbort = new AbortController();
+      st.busy = true;
+      item.status = 'processing'; item.stateText = 'Processing…';
+      updateItemEl(item);
+      v.pause();
+      res = await processItem(item, opts, (p) => { prog(p); item.stateText = progressText(p); }, sheetAbort.signal);
+      updateItemEl(item);
+      syncBatchButtons();
+    }
+    prog({ frac: 1, text: 'Saving…' });
+    if (await saveBlob(res.blob, res.name)) {
+      const i = res.info || {};
+      toast(`Saved ${res.name} (${fmtMB(res.blob.size)}${i.seconds ? `, ${Math.round(i.seconds)} s, ${i.fps.toFixed(0)} fps` : ''})`);
+    }
+    $('sheet').hidden = true;
+  } catch (e) {
+    console.error(e);
+    if (item.status === 'processing') { item.status = item.result ? 'stale' : 'ready'; item.stateText = e.name === 'AbortError' ? 'Stopped' : 'Ready'; updateItemEl(item); }
+    $('exportErr').textContent = e.name === 'AbortError' ? 'Export cancelled.' : e.message || String(e);
+    $('exportErr').hidden = false;
+    go.disabled = false;
+  } finally {
+    st.busy = false;
+    sheetAbort = null;
+  }
+}
+
+// ------------------------------------------------------------- speed test
+async function speedTest() {
+  const rows = $('speedRows');
+  const go = $('speedGo');
+  go.disabled = true;
+  const tr = (label, sub, fps, secs) => `<tr><td>${label}<small>${sub}</small></td><td>${fps}</td><td>${secs}</td></tr>`;
+  rows.innerHTML = tr('Rendering test clip…', '1920×1080, 4 s, 120 frames', '', '');
+  $('speedNote').textContent = '';
+  const results = [];
+  try {
+    // key frame every 2 s, like most phone and action cameras
+    const clip = await demoClip(null, { width: 1920, height: 1080, seconds: 4, gop: 60 });
+    const file = new File([clip.blob], clip.name, { type: clip.type });
+    const modes = [
+      { label: 'Previous method', sub: 'seek every frame, Rust/WASM on the CPU', opts: { forceCompat: true }, gpu: null },
+      { label: 'Direct decoding', sub: 'WebCodecs decode, Rust/WASM on the CPU', opts: {}, gpu: null },
+      { label: 'Direct decoding + GPU', sub: 'WebCodecs decode, Rust analysis, WebGL2 shader', opts: {}, gpu: st.gpu },
+    ];
+    for (const m of modes) {
+      if (m.label.includes('GPU') && !st.gpu) { results.push({ m, skip: 'WebGL2 not available' }); continue; }
+      rows.innerHTML = results.map((r) => tr(r.m.label, r.m.sub, r.skip ? '—' : r.info.fps.toFixed(1), r.skip ? r.skip : `${r.info.seconds.toFixed(1)} s`)).join('')
+        + tr(m.label, m.sub, '…', '');
+      const r = await exportVideo({ file, eng: st.eng, gpu: m.gpu, user: presetValues('auto'), locked: null, opts: { format: 'mp4', fps: 30, ...m.opts } });
+      results.push({ m, info: r.info });
+    }
+    rows.innerHTML = results.map((r) => tr(r.m.label, r.m.sub, r.skip ? '—' : r.info.fps.toFixed(1), r.skip ? r.skip : `${r.info.seconds.toFixed(1)} s`)).join('');
+    const base = results[0]?.info?.fps, best = Math.max(...results.filter((r) => r.info).map((r) => r.info.fps));
+    const fast = results.find((r) => r.info && r.info.path === 'fast');
+    $('speedNote').textContent = base
+      ? `Fastest method is ${(best / base).toFixed(1)}× the previous one on this device. ${fast ? `Encoder: ${fast.info.codec}. ` : ''}Times include decoding, analysis, colour correction and encoding.`
+      : '';
+    window.reefhueSpeed = results.map((r) => ({ label: r.m.label, ...(r.info || { skip: r.skip }) }));
+  } catch (e) {
+    $('speedNote').textContent = `Speed test failed: ${e.message || e}`;
+  } finally {
+    go.disabled = false;
+    go.textContent = 'Run again';
+  }
+}
+
+// ------------------------------------------------------------- wiring
+function bindInputs() {
+  $('fileInput').addEventListener('change', (e) => { if (e.target.files.length) addFiles(e.target.files); e.target.value = ''; });
+  let depth = 0;
+  window.addEventListener('dragenter', (e) => { if ([...e.dataTransfer.types].includes('Files')) { depth++; $('drop').hidden = false; } });
+  window.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; $('drop').hidden = true; } });
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', (e) => {
+    e.preventDefault(); depth = 0; $('drop').hidden = true;
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  });
+  $('qList').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-act]');
+    if (!btn) return;
+    const item = st.items.find((i) => String(i.id) === btn.closest('.q-item').dataset.id);
+    if (!item) return;
+    if (btn.dataset.act === 'select') selectItem(item);
+    if (btn.dataset.act === 'remove') removeItem(item);
+    if (btn.dataset.act === 'download' && item.result) saveBlob(item.result.blob, item.result.name);
+  });
+  $('qProcess').onclick = runBatch;
+  $('qZip').onclick = downloadAll;
+  $('qOutput').onchange = () => { for (const i of st.items) itemEdited(i); };
+  $('tfAuto').onclick = () => {
+    if (!st.cur) return;
+    st.cur.locked = null;
+    $('lockAuto').checked = false;
+    applyPreset('auto');
+  };
+  $('tfAll').onclick = () => {
+    const src = st.cur;
+    if (!src) return;
+    let n = 0;
+    for (const i of st.items) {
+      if (i === src) continue;
+      i.preset = src.preset;
+      i.user = { ...src.user };
+      i.locked = null;
+      itemEdited(i);
+      n++;
+    }
+    toast(`Settings copied to ${n} other file${n === 1 ? '' : 's'}.`);
+  };
+  $('exportBtn').onclick = openSheet;
+  $('sheetCancel').onclick = () => { if (sheetAbort) sheetAbort.abort(); else $('sheet').hidden = true; };
+  $('sheetGo').onclick = runSheet;
+  $('resetBtn').onclick = () => st.cur && applyPreset(st.cur.preset);
+  $('playBtn').onclick = togglePlay;
+  $('stepBack').onclick = () => stepFrame(-1);
+  $('stepFwd').onclick = () => stepFrame(1);
+  $('muteBtn').onclick = () => setMuted(!v.muted);
+  $('scrub').addEventListener('input', (e) => { v.pause(); v.currentTime = (+e.target.value / 1000) * v.duration; });
+  $('lockAuto').addEventListener('change', (e) => {
+    if (!st.cur) return;
+    st.cur.locked = e.target.checked ? { data: st.thumb.slice(), w: st.tw, h: st.th } : null;
+    reanalyze(); requestRender(); itemEdited(st.cur);
+  });
+  $('demoPhotoBtn').onclick = () => loadDemoPhoto(true);
+  $('demoClipBtn').onclick = async () => {
+    try {
+      busy('Rendering a demo clip in the browser…', 0);
+      const clip = await demoClip((f) => busy('Rendering a demo clip in the browser…', f));
+      busy(null);
+      addFiles([new File([clip.blob], clip.name, { type: clip.type })]);
+    } catch (e) {
+      toast(e.message || String(e));
+    } finally { busy(null); }
+  };
+  $('speedBtn').onclick = () => { $('speed').hidden = false; };
+  $('speedClose').onclick = () => { $('speed').hidden = true; };
+  $('speedGo').onclick = speedTest;
+  let rt = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(relayout, 120);
+  });
+}
+
+async function loadDemoPhoto(select) {
+  busy('Drawing the demo reef…', 0.3);
+  try {
+    const blob = await demoPhoto();
+    const file = new File([blob], 'demo-reef-9m.jpg', { type: 'image/jpeg' });
+    const [item] = addFiles([file]);
+    if (item) item.demo = !select;
+  } finally { busy(null); }
+}
+
+async function main() {
+  buildUI();
+  bindStage();
+  bindInputs();
+  applyView();
+  drawCast();
+  drawHist();
+  renderQueue();
+  try {
+    const b64 = globalThis.REEFHUE_WASM_B64;
+    const src = b64 ? Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0)) : 'engine.wasm';
+    st.eng = await Engine.load(src);
+  } catch (e) {
+    $('fileName').textContent = 'The colour engine failed to load';
+    toast(`WebAssembly engine failed to load: ${e.message}`, 10000);
+    return;
+  }
+  st.gpu = GpuRenderer.create();
+  await loadDemoPhoto(false);
+}
+
+window.reefhue = st; // handy for debugging and automated tests
+main();
+
+return {  };
+})();
+</script>
+</body>
+</html>

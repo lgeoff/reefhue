@@ -1,0 +1,83 @@
+{
+ "note": "ΔE2000 mean vs the preset result, 300x200 px. v1 = 14 sliders, v2 = with water hue and water brightness.",
+ "pairs": [
+  {
+   "preset": "Ocean Lights",
+   "edit_size": 15.67,
+   "auto": 9.92,
+   "best_fit_v1": 3.28,
+   "best_fit_v2": 3.24,
+   "global_ceiling": 3.68,
+   "fit_settings_v2": {
+    "strength": 76,
+    "red": 140,
+    "balance": 109,
+    "dehaze": 77,
+    "exposure": 0,
+    "contrast": -22,
+    "shadows": 52,
+    "highlights": 6,
+    "temp": -22,
+    "tint": 95,
+    "saturation": -63,
+    "vibrance": -58,
+    "water": 83,
+    "clarity": 60,
+    "waterHue": -8,
+    "waterLum": 20
+   }
+  },
+  {
+   "preset": "Diving Close-up",
+   "edit_size": 13.37,
+   "auto": 19.35,
+   "best_fit_v1": 6.9,
+   "best_fit_v2": 5.29,
+   "global_ceiling": 3.31,
+   "fit_settings_v2": {
+    "strength": 98,
+    "red": 184,
+    "balance": 27,
+    "dehaze": 58,
+    "exposure": -0.25,
+    "contrast": -4,
+    "shadows": -2,
+    "highlights": -100,
+    "temp": -6,
+    "tint": 69,
+    "saturation": -48,
+    "vibrance": -12,
+    "water": 100,
+    "clarity": 55,
+    "waterHue": 80,
+    "waterLum": -62
+   }
+  },
+  {
+   "preset": "Maldives Islands",
+   "edit_size": 10.18,
+   "auto": 8.99,
+   "best_fit_v1": 4.61,
+   "best_fit_v2": 2.38,
+   "global_ceiling": 1.85,
+   "fit_settings_v2": {
+    "strength": 70,
+    "red": 3,
+    "balance": 131,
+    "dehaze": 53,
+    "exposure": 0,
+    "contrast": 30,
+    "shadows": 10,
+    "highlights": -97,
+    "temp": 13,
+    "tint": 3,
+    "saturation": -52,
+    "vibrance": 71,
+    "water": -65,
+    "clarity": 5,
+    "waterHue": 84,
+    "waterLum": 41
+   }
+  }
+ ]
+}

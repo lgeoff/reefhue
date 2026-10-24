@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Reefhue</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="name">Reefhue</span>
+    <span class="sub">Underwater colour restore · runs on your machine</span>
+  </div>
+  <div class="file" aria-live="polite">
+    <span id="fileName" class="file-name">Loading engine…</span>
+    <span id="fileMeta" class="file-meta"></span>
+  </div>
+  <div class="actions">
+    <label class="btn" for="fileInput">Add photos or videos</label>
+    <input type="file" id="fileInput" accept="image/*,video/*,.mov,.mp4,.m4v" multiple hidden>
+    <button type="button" id="exportBtn" class="btn primary" disabled>Download</button>
+  </div>
+</header>
+
+<main class="app" id="app">
+  <aside class="queue" id="queue" aria-label="Batch queue" hidden>
+    <div class="q-head">
+      <h2>Batch</h2>
+      <span class="q-count" id="qCount"></span>
+    </div>
+    <ol class="q-list" id="qList"></ol>
+    <div class="q-foot">
+      <label class="field small" for="qOutput">Output
+        <select id="qOutput">
+          <option value="mp4:0">MP4 · original size</option>
+          <option value="mp4:2160">MP4 · up to 4K</option>
+          <option value="mp4:1080">MP4 · up to 1080p</option>
+          <option value="mp4:720">MP4 · up to 720p</option>
+          <option value="webm:0">WebM · original size</option>
+        </select>
+      </label>
+      <div class="q-buttons">
+        <button type="button" id="qProcess" class="btn primary">Process all</button>
+        <button type="button" id="qZip" class="btn" disabled>Download all (.zip)</button>
+      </div>
+      <p class="q-status" id="qStatus" aria-live="polite"></p>
+    </div>
+  </aside>
+
+  <section class="viewer" aria-label="Preview">
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Compare">
+        <button type="button" id="viewSplit" class="on" aria-pressed="true">Split</button>
+        <button type="button" id="viewAfter" aria-pressed="false">After</button>
+        <button type="button" id="viewBefore" aria-pressed="false">Before</button>
+      </div>
+      <span class="hint">Hold <kbd>B</kbd> to see the original · drag the divider</span>
+      <div class="demo-links">
+        <button type="button" id="demoPhotoBtn" class="link">Demo photo</button>
+        <button type="button" id="demoClipBtn" class="link">Demo clip</button>
+      </div>
+    </div>
+
+    <div class="stage-wrap" id="stageWrap">
+      <div class="stage" id="stage">
+        <canvas id="beforeCanvas" aria-label="Original"></canvas>
+        <canvas id="afterCanvas" aria-label="Restored"></canvas>
+        <div class="handle" id="handle"><span></span></div>
+        <span class="corner corner-l">Before</span>
+        <span class="corner corner-r">After</span>
+      </div>
+      <div class="drop" id="drop" hidden><div>Drop to add<small>One file opens it · several make a batch · JPEG · PNG · WebP · MP4 · MOV · WebM</small></div></div>
+      <div class="busy" id="busy" hidden><div class="busy-card"><span id="busyText">Working…</span><div class="meter"><i id="busyBar"></i></div></div></div>
+    </div>
+
+    <div class="transport" id="transport" hidden>
+      <button type="button" id="playBtn" class="icon" aria-label="Play">▶</button>
+      <button type="button" id="stepBack" class="icon small" aria-label="Previous frame">‹</button>
+      <button type="button" id="stepFwd" class="icon small" aria-label="Next frame">›</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="Position">
+      <span class="time" id="timeLabel">0:00.0 / 0:00.0</span>
+      <button type="button" id="muteBtn" class="chip" aria-pressed="true">Sound off</button>
+    </div>
+
+    <div class="readout" id="readout">
+      <figure class="cast">
+        <canvas id="castPlot" width="220" height="220" aria-label="Colour cast on the a*b* plane"></canvas>
+        <figcaption>Highlight cast on a*b* <span class="legend"><i class="dot hollow"></i>before <i class="dot"></i>after</span></figcaption>
+      </figure>
+      <figure class="hists">
+        <canvas id="histPlot" width="520" height="150" aria-label="RGB histograms before and after"></canvas>
+        <figcaption>RGB histogram · top before, bottom after</figcaption>
+      </figure>
+      <div class="metrics">
+        <div class="verdict" id="verdict"><span class="pill">—</span><span class="vtext"></span></div>
+        <table>
+          <thead><tr><th scope="col">Measure</th><th scope="col">Before</th><th scope="col">After</th></tr></thead>
+          <tbody id="metricRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <aside class="inspector" aria-label="Adjustments">
+    <section class="panel this-file" id="thisFile" hidden>
+      <div class="tf-row">
+        <h2>Settings for this file</h2>
+        <span class="q-chip" id="tfChip">Auto</span>
+      </div>
+      <div class="tf-actions">
+        <button type="button" id="tfAuto" class="btn ghost small">Back to Auto</button>
+        <button type="button" id="tfAll" class="btn ghost small">Use for all files</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Preset</h2>
+      <div class="presets" id="presets"></div>
+      <h2 class="sub-h">Looks</h2>
+      <div class="presets" id="looks"></div>
+      <div class="absorb" aria-hidden="true">
+        <div class="absorb-bar">
+          <i style="--c:#e8473c;--l:16.7%"></i>
+          <i style="--c:#f08a2c;--l:33.3%"></i>
+          <i style="--c:#f2d23a;--l:66.7%"></i>
+          <i style="--c:#58c26d;--l:88%"></i>
+          <i style="--c:#3f7fe0;--l:100%"></i>
+        </div>
+        <div class="absorb-scale"><span>0 m</span><span>5</span><span>10</span><span>20</span><span>30 m</span></div>
+        <p>Red (650 nm) is gone by ~5 m, orange by ~10 m, yellow by ~20 m.</p>
+      </div>
+    </section>
+
+    <section class="panel auto">
+      <h2>Detected</h2>
+      <dl class="auto-grid">
+        <div><dt>Water</dt><dd id="autoWater">—</dd></div>
+        <div><dt>Red left</dt><dd id="autoRed">—</dd></div>
+        <div><dt>Red lift</dt><dd id="autoGain">—</dd></div>
+      </dl>
+      <label class="check" id="lockRow" hidden><input type="checkbox" id="lockAuto"> Keep this frame's correction for the whole clip</label>
+    </section>
+
+    <div id="sliders"></div>
+
+    <div class="panel foot">
+      <button type="button" id="resetBtn" class="btn ghost">Reset to preset</button>
+      <button type="button" id="speedBtn" class="link">Test export speed on this device</button>
+    </div>
+  </aside>
+</main>
+
+<div class="sheet-backdrop" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">Download</h2>
+    <div id="sheetImage">
+      <label class="field" for="imgFormat">Format
+        <select id="imgFormat"><option value="jpeg">JPEG (quality 95)</option><option value="png">PNG (lossless)</option><option value="webp">WebP (quality 95)</option></select>
+      </label>
+      <p class="note" id="imgNote"></p>
+    </div>
+    <div id="sheetVideo">
+      <label class="field" for="vidRes">Resolution
+        <select id="vidRes"></select>
+      </label>
+      <label class="field" for="vidFormat">Format
+        <select id="vidFormat"><option value="mp4">MP4 (H.264 or HEVC, original sound kept)</option><option value="webm">WebM (VP9, Opus sound)</option></select>
+      </label>
+      <p class="note" id="vidNote"></p>
+    </div>
+    <div class="progress" id="exportProgress" hidden>
+      <div class="meter"><i id="exportBar"></i></div>
+      <span id="exportText"></span>
+    </div>
+    <p class="err" id="exportErr" hidden></p>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="sheetCancel">Cancel</button>
+      <button type="button" class="btn primary" id="sheetGo">Process and download</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="speed" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="speedTitle">
+    <h2 id="speedTitle">Export speed on this device</h2>
+    <p class="note">Renders a 4-second 1080p test clip, then exports it three ways. Takes about a minute.</p>
+    <table class="speed-table">
+      <thead><tr><th scope="col">Method</th><th scope="col">Frames/s</th><th scope="col">Time</th></tr></thead>
+      <tbody id="speedRows"></tbody>
+    </table>
+    <p class="note" id="speedNote"></p>
+    <div class="sheet-actions">
+      <button type="button" class="btn ghost" id="speedClose">Close</button>
+      <button type="button" class="btn primary" id="speedGo">Run test</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<video id="video" playsinline muted preload="auto" hidden></video>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

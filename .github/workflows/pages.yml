@@ -1,0 +1,70 @@
+# Build the Rust engine to WebAssembly, test it, and publish web/ to GitHub Pages.
+name: Build and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain with the WebAssembly target
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add wasm32-unknown-unknown
+
+      - name: Engine unit tests
+        working-directory: engine
+        run: cargo test --lib
+
+      - name: Build engine.wasm
+        run: ./engine/build.sh
+
+      - name: Check that the engine loads
+        run: |
+          node --input-type=module -e "
+            import { readFileSync } from 'node:fs';
+            import { Engine, DEFAULTS, buildSettings } from './web/engine.js';
+            const eng = await Engine.load(readFileSync('web/engine.wasm'));
+            const px = new Uint8ClampedArray(64 * 64 * 4).map((_, i) => (i % 4 === 3 ? 255 : (i % 4) * 90 + 20));
+            const out = eng.process(px, 64, 64, buildSettings(eng.analyze(px, 64, 64), DEFAULTS));
+            if (out.length !== px.length) throw new Error('bad output');
+            console.log('engine.wasm OK');
+          "
+
+      - name: Single-file build
+        run: python3 tools/bundle.py
+
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp -r web/. _site/
+          cp dist/reefhue.html _site/reefhue-single-file.html
+          touch _site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
