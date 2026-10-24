@@ -8,6 +8,7 @@ import { openMp4 } from './mp4.js';
 import { makeZip } from './zip.js';
 import { loadPhotoFile, decodePhoto, describe } from './image.js';
 import { demoPhoto, demoClip } from './demo.js';
+import { Tour, tourSeen, markTourSeen } from './tour.js';
 
 const $ = (id) => document.getElementById(id);
 const PREVIEW_MAX = 1600; // long edge of the live preview buffer
@@ -1103,6 +1104,17 @@ function watchPinnedPreview() {
   new IntersectionObserver(([e]) => pane.classList.toggle('stuck', !e.isIntersecting && e.boundingClientRect.top < 0)).observe(mark);
 }
 
+function bindHelp() {
+  const tour = new Tour();
+  const btn = $('helpBtn');
+  btn.onclick = () => { btn.classList.remove('nudge'); markTourSeen(); $('toast').hidden = true; tour.start(); };
+  window.reefhueTour = tour;
+  if (!tourSeen()) {
+    btn.classList.add('nudge');
+    setTimeout(() => { if ($('toast').hidden) toast('New here? Tap Help for a one-minute tour.', 6000); }, 1200);
+  }
+}
+
 function bindDebug() {
   const version = document.querySelector('meta[name="reefhue-version"]')?.content || 'dev';
   $('version').textContent = version;
@@ -1212,6 +1224,7 @@ async function loadDemoPhoto(select) {
 async function main() {
   bindDebug();
   watchPinnedPreview();
+  bindHelp();
   buildUI();
   bindStage();
   bindInputs();

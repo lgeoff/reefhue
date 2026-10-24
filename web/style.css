@@ -355,3 +355,33 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
 .debug-head { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
 .debug-head b { margin-right: auto; }
 .debug pre { margin: 0; overflow: auto; font: 11.5px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+
+/* ---------------------------------------------------------------- tour */
+.help-btn { gap: 6px; }
+.help-btn > span:first-child {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+  border: 1.5px solid currentColor; font-weight: 600; font-size: 12px; line-height: 1;
+}
+.help-btn.nudge { border-color: var(--red); color: var(--red); }
+.tour { position: fixed; inset: 0; z-index: 50; }
+.tour-block { position: absolute; inset: 0; }
+.tour-spot {
+  position: fixed; border-radius: 8px; pointer-events: none;
+  box-shadow: 0 0 0 2px var(--red), 0 0 0 9999px rgba(0, 0, 0, 0.62);
+  transition: left 0.2s, top 0.2s, width 0.2s, height 0.2s;
+}
+.tour.centred .tour-spot { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62); }
+.tour-card {
+  position: fixed; width: min(360px, calc(100vw - 24px)); box-sizing: border-box;
+  background: var(--raise); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px 16px 12px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  transition: left 0.2s, top 0.2s;
+}
+.tour-count { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.tour-card h3 { font: 600 20px/1.15 var(--font-display); letter-spacing: 0.02em; margin: 0 0 6px; }
+.tour-card p { margin: 0 0 14px; color: var(--ink); font-size: 14px; }
+.tour-card b { font-weight: 600; }
+.tour-nav { display: flex; gap: 8px; align-items: center; }
+.tour-gap { flex: 1; }
+@media (max-width: 900px) { .help-label { display: none; } .help-btn { padding-inline: 10px; } }
+@media (prefers-reduced-motion: reduce) { .tour-spot, .tour-card { transition: none; } }

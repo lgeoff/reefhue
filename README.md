@@ -11,6 +11,7 @@ Restore the colours of underwater photos and videos in the browser, one file at 
 
 ## Using it
 
+- **Help** in the header starts a guided tour of every feature (offered once on the first visit). On phones the preview stays pinned at the top while you scroll the settings.
 - **Open** JPEG/PNG/WebP photos or MP4/MOV/WebM videos (button or drag and drop). One file opens it; several files make a batch. The app starts with a generated demo reef; *Demo clip* renders a short test video in the browser.
 - **Presets:** Auto, Shallow (0–5 m), Mid (5–15 m), Deep (15 m +), Green water, Natural, Vivid, plus three **Looks** (Teal matte, Moody blue, Tropical light). Every slider can be fine-tuned; double-click a slider to reset it to the preset value.
 - **Water controls:** saturation, hue (turquoise ↔ deep blue) and brightness of blue/cyan water only, like Lightroom's HSL "Aqua/Blue" adjustments.

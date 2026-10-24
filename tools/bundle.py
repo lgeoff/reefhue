@@ -14,7 +14,7 @@ import re
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB = os.path.join(ROOT, "web")
 DIST = os.path.join(ROOT, "dist")
-MODULES = ["engine.js", "webm.js", "mp4.js", "gpu.js", "zip.js", "image.js", "pipeline.js", "demo.js", "app.js"]  # dependency order
+MODULES = ["engine.js", "webm.js", "mp4.js", "gpu.js", "zip.js", "image.js", "pipeline.js", "demo.js", "tour.js", "app.js"]  # dependency order
 
 
 def read(name):
