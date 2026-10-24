@@ -44,12 +44,17 @@ def main():
     js = js.replace("new URL('engine.wasm', import.meta.url)", "'engine.wasm'")
     scripts = f"<script>window.REEFHUE_WASM_B64 = \"{wasm}\";</script>\n<script type=\"module\">\n{js}</script>"
 
+    # single-file builds: the logo goes inline, the PNG/manifest links are dropped
+    logo = "data:image/svg+xml;base64," + base64.b64encode(open(os.path.join(WEB, "logo.svg"), "rb").read()).decode()
+    html = html.replace('src="logo.svg"', f'src="{logo}"').replace('href="logo.svg"', f'href="{logo}"')
+    html = re.sub(r'<link rel="(apple-touch-icon|manifest)"[^>]*>\n', "", html)
+
     head = re.search(r"<head>(.*?)</head>", html, re.S).group(1)
     body = re.search(r"<body>(.*?)</body>", html, re.S).group(1)
     body = re.sub(r'<script type="module" src="app.js"></script>', "", body)
     head_keep = "\n".join(
         l for l in head.strip().splitlines()
-        if "charset" not in l and 'name="viewport"' not in l and "style.css" not in l
+        if "charset" not in l and 'name="viewport"' not in l and "style.css" not in l and 'rel="icon"' not in l
     )
 
     full = html.replace('<link rel="stylesheet" href="style.css">', f"<style>\n{css}</style>")

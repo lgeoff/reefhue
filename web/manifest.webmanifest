@@ -1,0 +1,14 @@
+{
+  "name": "Reefhue",
+  "short_name": "Reefhue",
+  "description": "Restore the colours of underwater photos and videos, on your device.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#141515",
+  "theme_color": "#1c1d1e",
+  "icons": [
+    { "src": "logo.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
