@@ -2,6 +2,14 @@
 //! version of a neutral grey ramp comes back close to neutral.
 
 use super::*;
+use std::sync::{Mutex, MutexGuard};
+
+/// The engine keeps its buffers in statics (it runs single-threaded in
+/// WebAssembly), so tests that call it must not run concurrently.
+static ENGINE: Mutex<()> = Mutex::new(());
+fn engine_lock() -> MutexGuard<'static, ()> {
+    ENGINE.lock().unwrap_or_else(|e| e.into_inner())
+}
 
 /// Beer–Lambert-style attenuation + backscatter veil, roughly 10 m of blue water.
 fn underwater(r: f32, g: f32, b: f32) -> [f32; 3] {
@@ -42,6 +50,7 @@ fn make_scene(w: usize, h: usize) -> (Vec<u8>, Vec<[f32; 3]>) {
 
 #[test]
 fn restores_grey_ramp_towards_neutral() {
+    let _engine = engine_lock();
     let (w, h) = (120, 80);
     let (src, _truth) = make_scene(w, h);
     let mut s = [0.0f32; NPARAMS];
@@ -74,6 +83,7 @@ fn restores_grey_ramp_towards_neutral() {
 
 #[test]
 fn strength_zero_is_identity() {
+    let _engine = engine_lock();
     let (w, h) = (32, 16);
     let (src, _) = make_scene(w, h);
     let mut s = [0.0f32; NPARAMS];
@@ -91,6 +101,7 @@ fn strength_zero_is_identity() {
 
 #[test]
 fn thumbnail_grid_matches_full_grid() {
+    let _engine = engine_lock();
     // clarity computed from a downscaled grid should be close to the full one
     let (w, h) = (160, 96);
     let (src, _) = make_scene(w, h);
@@ -128,6 +139,7 @@ fn thumbnail_grid_matches_full_grid() {
 
 #[test]
 fn metrics_detect_cast() {
+    let _engine = engine_lock();
     let (w, h) = (64, 32);
     let (src, _) = make_scene(w, h);
     let mut m = vec![0.0f32; METRICS_LEN];
