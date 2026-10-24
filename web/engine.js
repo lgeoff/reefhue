@@ -92,6 +92,20 @@ export class Engine {
   }
 
   /**
+   * Strip processing for very large photos: begin() once, then rows() per
+   * strip. Keeps memory to one strip instead of two full-size copies.
+   */
+  begin(settings, thumb, tw, th) { this._prepare(settings, thumb, tw, th); }
+  rows(rgba, w, rows, y0, fullH) {
+    const n = w * rows * 4;
+    this._reserve(n);
+    this.u8.set(rgba, this.pA);
+    this.x.process_rows(this.pA, this.pB, w, rows, y0, fullH);
+    rgba.set(this.u8.subarray(this.pB, this.pB + n));
+    return rgba;
+  }
+
+  /**
    * Everything the WebGL renderer needs for one frame: derived constants,
    * the tone curve and the clarity grid, all computed by the Rust engine.
    */

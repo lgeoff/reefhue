@@ -636,13 +636,27 @@ unsafe fn tone(v: f32) -> f32 {
 /// (they may be the same buffer). Alpha is copied.
 #[no_mangle]
 pub unsafe extern "C" fn process(src: *const u8, dst: *mut u8, w: u32, h: u32) {
-    let w = w as usize;
-    let h = h as usize;
     let a = affine();
-    let clarity = clamp(P[S_CLARITY], 0.0, 1.0) * 1.6;
-    if clarity > 0.0 && !GRID_READY {
-        grid_from(src, w, h, &a);
+    if P[S_CLARITY] > 0.0 && !GRID_READY {
+        grid_from(src, w as usize, h as usize, &a);
     }
+    process_region(src, dst, w as usize, h as usize, 0, h as usize, &a);
+}
+
+/// Process `rows` rows that start at row `y0` of an image `full_h` rows tall,
+/// so very large photos can be handled one strip at a time with little
+/// memory. Needs the clarity grid from `build_grid` (normally the thumbnail).
+#[no_mangle]
+pub unsafe extern "C" fn process_rows(src: *const u8, dst: *mut u8, w: u32, rows: u32, y0: u32, full_h: u32) {
+    let a = affine();
+    if P[S_CLARITY] > 0.0 && !GRID_READY {
+        grid_from(src, w as usize, rows as usize, &a);
+    }
+    process_region(src, dst, w as usize, rows as usize, y0 as usize, full_h as usize, &a);
+}
+
+unsafe fn process_region(src: *const u8, dst: *mut u8, w: usize, h: usize, y0: usize, full_h: usize, a: &Affine) {
+    let clarity = clamp(P[S_CLARITY], 0.0, 1.0) * 1.6;
     let strength = clamp(P[S_STRENGTH], 0.0, 1.0);
     let sat = 1.0 + clamp(P[S_SATURATION], -1.0, 1.0);
     let vib = clamp(P[S_VIBRANCE], -1.0, 1.0);
@@ -660,11 +674,11 @@ pub unsafe extern "C" fn process(src: *const u8, dst: *mut u8, w: u32, h: u32) {
             let r0 = rd(src, k);
             let g0 = rd(src, k + 1);
             let b0 = rd(src, k + 2);
-            apply_affine(&a, r0, g0, b0, &mut c3);
+            apply_affine(a, r0, g0, b0, &mut c3);
 
             if clarity > 0.0 {
                 let yl = clamp(luma(&c3), 0.0, 1.5);
-                let yb = grid_sample(x, y, w, h);
+                let yb = grid_sample(x, y0 + y, w, full_h);
                 let d = yl - yb;
                 // gentle on extremes to limit halos
                 let boost = clarity * d / (1.0 + 4.0 * fabs(d));

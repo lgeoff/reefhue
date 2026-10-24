@@ -6,6 +6,7 @@ import { GpuRenderer } from './gpu.js';
 import { exportVideo, exportImage, thumbSize } from './pipeline.js';
 import { openMp4 } from './mp4.js';
 import { makeZip } from './zip.js';
+import { loadPhotoFile, decodePhoto, describe } from './image.js';
 import { demoPhoto, demoClip } from './demo.js';
 
 const $ = (id) => document.getElementById(id);
@@ -85,7 +86,7 @@ const fmtMB = (b) => (b >= 1e9 ? `${(b / 1e9).toFixed(2)} GB` : `${(b / 1e6).toF
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const presetValues = (k) => Object.fromEntries(KEYS.map((key) => [key, PRESETS[k][key] ?? DEFAULTS[key]]));
 const isVideoFile = (f) => f.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|mkv)$/i.test(f.name);
-const isImageFile = (f) => f.type.startsWith('image/') || /\.(jpe?g|png|webp|avif|gif|bmp)$/i.test(f.name);
+const isImageFile = (f) => f.type.startsWith('image/') || /\.(jpe?g|png|webp|avif|gif|bmp|heic|heif)$/i.test(f.name) || (!f.type && !isVideoFile(f));
 const baseName = (n) => n.replace(/\.[^.]+$/, '') || 'reefhue';
 
 // ----------------------------------------------------------- item model
@@ -452,12 +453,42 @@ function addFiles(list) {
     preset: 'auto', user: presetValues('auto'), locked: null,
     status: 'ready', progress: 0, stateText: 'Ready', result: null,
   }));
+  for (const item of added) item.ready = item.kind === 'image' ? readPhoto(item) : Promise.resolve();
   st.items.push(...added);
   renderQueue();
   probeAll(added);
   // open the first new file, unless a batch is running and the user is looking at another one
   if (!st.cur || !st.items.includes(st.cur) || !st.batch) selectItem(added[0]);
   return added;
+}
+
+// Photos are read into memory once, one at a time: files picked through
+// Android's file browser can fail when the same file is read twice at once.
+let photoChain = Promise.resolve();
+function readPhoto(item) {
+  const original = item.file;
+  photoChain = photoChain.then(async () => {
+    try {
+      const { file, info } = await loadPhotoFile(original);
+      item.file = file;
+      item.info = info;
+      item.size = info.size;
+      if (info.w) { item.w = info.w; item.h = info.h; }
+    } catch (e) {
+      item.status = 'error';
+      item.unplayable = true;
+      item.stateText = e.message;
+      item.errorDetails = e.details || '';
+      throw e;
+    }
+  });
+  return photoChain;
+}
+
+function photoError(item, e) {
+  const details = [item.info ? describe(item.info, item.name) : item.name, e.details || item.errorDetails].filter(Boolean).join(' — ');
+  console.error('[reefhue] photo', details, e);
+  return { message: e.message || String(e), details };
 }
 
 async function probeAll(items) {
@@ -476,10 +507,20 @@ async function probe(item) {
     g.drawImage(src, (112 - w * k) / 2, (84 - h * k) / 2, w * k, h * k);
   };
   if (item.kind === 'image') {
-    const bmp = await createImageBitmap(item.file, { imageOrientation: 'from-image' });
-    item.w = bmp.width; item.h = bmp.height;
-    cover(bmp, bmp.width, bmp.height);
-    bmp.close?.();
+    try {
+      await item.ready;
+      const bmp = await decodePhoto(item.file, item.info, { maxEdge: 224 });
+      if (!item.w) { item.w = bmp.width; item.h = bmp.height; }
+      cover(bmp, bmp.width, bmp.height);
+      bmp.close?.();
+    } catch (e) {
+      const pe = photoError(item, e);
+      item.status = 'error';
+      item.unplayable = true;
+      item.stateText = pe.message;
+      item.errorDetails = pe.details;
+      return;
+    }
   } else {
     let codec = null;
     try {
@@ -612,17 +653,30 @@ function clearPreview() {
 async function selectItem(item) {
   if (!item) return;
   st.cur = item;
+  if (/^Could not open/.test($('toast').textContent)) $('toast').hidden = true;
   for (const li of $('qList').children) li.setAttribute('aria-current', li.dataset.id === String(item.id) ? 'true' : 'false');
   syncSliders();
   syncThisFile();
   $('lockAuto').checked = !!item.locked;
-  if (item.unplayable) { stopVideo(); clearPreview(); $('fileName').textContent = item.name; $('fileMeta').textContent = item.stateText; return; }
+  const showError = (message, details) => {
+    stopVideo(); clearPreview();
+    $('fileName').textContent = item.name;
+    $('fileMeta').textContent = message;
+    toast(`Could not open ${item.name}: ${message}${details ? `\nDetails: ${details}` : ''}`, 15000);
+  };
+  if (item.unplayable) { showError(item.stateText, item.errorDetails); return; }
   try {
     if (item.kind === 'video') await loadVideo(item);
     else await loadImage(item);
   } catch (err) {
     console.error(err);
-    if (st.cur === item) toast(`Could not open ${item.name}: ${err.message || err}. This browser may not decode that format.`);
+    if (st.cur !== item) return;
+    if (item.kind === 'image') {
+      const pe = photoError(item, err);
+      item.status = 'error'; item.unplayable = true; item.stateText = pe.message; item.errorDetails = pe.details;
+      updateItemEl(item);
+      showError(pe.message, pe.details);
+    } else showError(`${err.message || err}. This browser may not decode that format.`);
   }
 }
 
@@ -631,13 +685,18 @@ function setFileLabel() {
   const item = st.cur;
   $('fileName').textContent = item.name;
   const extra = st.kind === 'video' ? ` · ${fmtTime(v.duration)} · ${(+st.fps).toFixed(st.fps % 1 ? 2 : 0)} fps` : '';
-  $('fileMeta').textContent = `${st.srcW}×${st.srcH}${extra}`;
+  const w = st.kind === 'image' && item.w ? item.w : st.srcW, h = st.kind === 'image' && item.h ? item.h : st.srcH;
+  $('fileMeta').textContent = `${w}×${h}${extra}`;
   $('exportBtn').disabled = false;
 }
 
 async function loadImage(item) {
-  const bmp = await createImageBitmap(item.file, { imageOrientation: 'from-image' });
-  if (st.cur !== item) return;
+  await item.ready;
+  if (item.unplayable) throw Object.assign(new Error(item.stateText), { details: item.errorDetails });
+  // the preview only needs screen resolution: decode downscaled to save memory
+  const bmp = await decodePhoto(item.file, item.info, { maxEdge: PREVIEW_MAX });
+  if (st.cur !== item) { bmp.close?.(); return; }
+  st.bitmap?.close?.();
   stopVideo();
   st.kind = 'image'; st.bitmap = bmp;
   st.srcW = bmp.width; st.srcH = bmp.height; st.smooth = null;
@@ -793,7 +852,8 @@ async function processItem(item, opts, onProgress, signal) {
   if (item.kind === 'image') {
     const fmt = opts.imageFormat || (/png$/i.test(item.file.type) ? 'png' : 'jpeg');
     onProgress?.({ frac: 0.5, text: 'Processing photo…' });
-    r = await exportImage({ file: item.file, eng: st.eng, user, locked: item.locked, format: fmt });
+    await item.ready;
+    r = await exportImage({ file: item.file, info: item.info, eng: st.eng, user, locked: item.locked, format: fmt });
   } else {
     r = await exportVideo({
       file: item.file, eng: st.eng, gpu: st.gpu, user, locked: item.locked,
@@ -912,7 +972,7 @@ function openSheet() {
       : `${frames} frames are restored on this device: decoded with WebCodecs, colour-corrected by the Rust engine${st.gpu ? ' on the GPU' : ''}, then encoded. Keep this tab open while it runs.`;
   } else {
     $('imgFormat').value = /png$/i.test(item.file.type) ? 'png' : 'jpeg';
-    $('imgNote').textContent = `Full resolution, ${st.srcW}×${st.srcH} px. Processed locally; the file never leaves this device. Camera metadata (EXIF) is not copied.`;
+    $('imgNote').textContent = `Full resolution, ${item.w || st.srcW}×${item.h || st.srcH} px. Processed locally; the file never leaves this device. Camera metadata (EXIF) is not copied.`;
   }
   const changeOpt = () => {
     if (item.status === 'done') $('sheetGo').textContent = 'Process and download';

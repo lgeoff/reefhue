@@ -12,6 +12,7 @@
 import { buildSettings, smoothAuto } from './engine.js';
 import { openMp4, SampleReader, Mp4Writer, mp4aEntry, opusEntry } from './mp4.js';
 import { WebMWriter, pickVideoCodec, encodeAudioTrack } from './webm.js';
+import { loadPhotoFile, decodeForExport } from './image.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const even = (x) => Math.max(2, Math.round(x / 2) * 2);
@@ -460,23 +461,34 @@ export async function exportVideo(job) {
   }
 }
 
-/** Restore a photo at full resolution. Resolves {blob, ext}. */
-export async function exportImage({ file, bitmap, eng, user, locked, format = 'jpeg' }) {
-  const bmp = bitmap || (await createImageBitmap(file, { imageOrientation: 'from-image' }));
-  const w = bmp.width, h = bmp.height;
+/**
+ * Restore a photo at full resolution (stepping down only if the device runs
+ * out of memory). Processes the image in strips so a 50 MP photo needs one
+ * full-size canvas plus a small strip buffer. Resolves {blob, ext, info}.
+ */
+export async function exportImage({ file, info, eng, user, locked, format = 'jpeg' }) {
+  const meta = info || (await loadPhotoFile(file)).info;
+  const { bitmap, scaled } = await decodeForExport(file, meta);
+  const w = bitmap.width, h = bitmap.height;
   const c = new OffscreenCanvas(w, h);
   const g = c.getContext('2d', { willReadFrequently: true });
-  g.drawImage(bmp, 0, 0);
+  g.drawImage(bitmap, 0, 0);
   const [tw, th] = thumbSize(w, h);
   const tc = new OffscreenCanvas(tw, th);
   const tg = tc.getContext('2d', { willReadFrequently: true });
-  tg.drawImage(bmp, 0, 0, tw, th);
+  tg.drawImage(bitmap, 0, 0, tw, th);
+  bitmap.close?.();
   const thumb = tg.getImageData(0, 0, tw, th).data;
   const a = locked || { data: thumb, w: tw, h: th };
   const auto = eng.analyze(a.data, a.w, a.h, user.red / 100, user.balance / 100);
-  const img = g.getImageData(0, 0, w, h);
-  eng.process(img.data, w, h, buildSettings(auto, user), img.data, thumb, tw, th);
-  g.putImageData(img, 0, 0);
+  eng.begin(buildSettings(auto, user), thumb, tw, th);
+  const strip = Math.max(16, Math.floor((4 << 20) / (w * 4))); // ~4 MB per strip
+  for (let y = 0; y < h; y += strip) {
+    const rows = Math.min(strip, h - y);
+    const img = g.getImageData(0, y, w, rows);
+    eng.rows(img.data, w, rows, y, h);
+    g.putImageData(img, 0, y);
+  }
   const blob = await c.convertToBlob({ type: `image/${format}`, quality: 0.95 });
-  return { blob, ext: format === 'jpeg' ? 'jpg' : format, info: { width: w, height: h } };
+  return { blob, ext: format === 'jpeg' ? 'jpg' : format, info: { width: w, height: h, scaled } };
 }

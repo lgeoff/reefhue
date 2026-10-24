@@ -313,6 +313,7 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   background: var(--raise); border: 1px solid var(--line); border-radius: 8px;
   padding: 10px 14px; z-index: 30; max-width: calc(100% - 32px); font-size: 13px;
+  white-space: pre-line; overflow-wrap: anywhere; user-select: text;
 }
 
 /* ---------------------------------------------------------------- narrow */

@@ -138,6 +138,33 @@ fn thumbnail_grid_matches_full_grid() {
 }
 
 #[test]
+fn strips_match_whole_image() {
+    let _engine = engine_lock();
+    let (w, h) = (96, 70);
+    let (src, _) = make_scene(w, h);
+    let mut s = [0.0f32; NPARAMS];
+    unsafe { analyze(src.as_ptr(), w as u32, h as u32, 1.0, 1.0, s.as_mut_ptr()) };
+    s[S_STRENGTH] = 1.0;
+    s[S_DEHAZE] = 1.0;
+    s[S_CLARITY] = 0.7;
+    let mut whole = vec![0u8; src.len()];
+    let mut strips = vec![0u8; src.len()];
+    unsafe {
+        prepare(s.as_ptr());
+        build_grid(src.as_ptr(), w as u32, h as u32);
+        process(src.as_ptr(), whole.as_mut_ptr(), w as u32, h as u32);
+        let mut y = 0;
+        while y < h {
+            let rows = (h - y).min(17);
+            let off = y * w * 4;
+            process_rows(src.as_ptr().add(off), strips.as_mut_ptr().add(off), w as u32, rows as u32, y as u32, h as u32);
+            y += rows;
+        }
+    }
+    assert_eq!(whole, strips);
+}
+
+#[test]
 fn metrics_detect_cast() {
     let _engine = engine_lock();
     let (w, h) = (64, 32);
