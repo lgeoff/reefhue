@@ -38,7 +38,15 @@ MP4/MOV file ─ mp4.js demuxer ─ VideoDecoder (hardware) ─┬─ 256 px thu
 - **MP4 output.** H.264 (or HEVC above 4096 px, or for HEVC sources when supported) with the source's rotation, and the original AAC sound copied without re-encoding. Other sound is re-encoded to AAC or Opus. WebM (VP9 + Opus) remains available.
 - **Fallback.** Files the demuxer or decoder can't handle (WebM, unusual codecs) go through the old seek-based path, with the same processing and MP4 output.
 
-**Speed test.** *Test export speed on this device* (bottom of the right panel) renders a 1080p clip and exports it with the old method, direct decoding + CPU, and direct decoding + GPU. In the headless test container (2 vCPU, no GPU, software codecs) the new path is 3.5× faster on camera-style files (x264 default GOP): 1.6 → 5.6 fps at 1080p. On a machine with a GPU and hardware video codecs the GPU column is the one that matters; run the test to see your numbers.
+**Speed test.** *Test export speed on this device* (bottom of the right panel) renders a 4-second 1080p clip and exports it three ways. Measured on a desktop with an NVIDIA RTX 2080 SUPER (Chrome, Windows):
+
+| Method | 1080p export speed | 4 s clip |
+|---|---|---|
+| Previous method: seek every frame, Rust/WASM on the CPU | 5.0 fps | 24.1 s |
+| Direct decoding, Rust/WASM on the CPU | 6.4 fps | 18.7 s |
+| Direct decoding + GPU | **72.1 fps** | **1.7 s** |
+
+That is 14.5× faster; a 10-minute 1080p30 dive video exports in about 4 minutes. On the GPU path the colour correction itself takes 0.8 ms per frame; most of the remaining time is the 256 px analysis thumbnail (7 ms) and the Rust analysis (2 ms). The seek cost of the old method grows with the camera's key-frame interval (up to ~450 ms per frame on long-GOP files).
 
 **Parallelism.** WebAssembly threads need cross-origin isolation (COOP/COEP headers), which a shared artifact page or a file:// page can't have, so CPU parallelism would mean one engine per Web Worker. The GPU path makes that unnecessary: decoding, the shader and encoding already run concurrently on dedicated hardware.
 
