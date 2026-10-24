@@ -45,6 +45,9 @@ jobs:
             console.log('engine.wasm OK');
           "
 
+      - name: Stamp the version
+        run: sed -i "s/name=\"reefhue-version\" content=\"dev\"/name=\"reefhue-version\" content=\"${GITHUB_SHA::7}\"/" web/index.html
+
       - name: Single-file build
         run: python3 tools/bundle.py
 
@@ -54,6 +57,7 @@ jobs:
           cp -r web/. _site/
           cp dist/reefhue.html _site/reefhue-single-file.html
           touch _site/.nojekyll
+          python3 tools/cachebust.py _site "${GITHUB_SHA::7}"
 
       - uses: actions/upload-pages-artifact@v3
         with:

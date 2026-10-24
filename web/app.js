@@ -441,6 +441,7 @@ function bindStage() {
 
 // ------------------------------------------------------------- queue
 function addFiles(list) {
+  for (const f of list) console.info('picked', f.name, `${f.size} bytes`, `type "${f.type}"`);
   const files = [...list].filter((f) => isVideoFile(f) || isImageFile(f));
   const skipped = list.length - files.length;
   if (skipped) toast(`${skipped} file${skipped > 1 ? 's' : ''} skipped: not a photo or video.`);
@@ -470,6 +471,7 @@ function readPhoto(item) {
   photoChain = photoChain.then(async () => {
     try {
       const { file, info } = await loadPhotoFile(original);
+      console.info('read', describe(info, item.name));
       item.file = file;
       item.info = info;
       item.size = info.size;
@@ -676,7 +678,7 @@ async function selectItem(item) {
       item.status = 'error'; item.unplayable = true; item.stateText = pe.message; item.errorDetails = pe.details;
       updateItemEl(item);
       showError(pe.message, pe.details);
-    } else showError(`${err.message || err}. This browser may not decode that format.`);
+    } else showError(`${err.message || err}. This browser may not decode that video format.`);
   }
 }
 
@@ -1069,6 +1071,45 @@ async function speedTest() {
   }
 }
 
+// ------------------------------------------------------------- debug log
+// Open the page with #debug (or tap "debug log") to see errors on screen,
+// handy on phones where DevTools aren't available.
+const debugLines = [];
+function dlog(kind, args) {
+  const text = args.map((a) => (a instanceof Error ? `${a.name}: ${a.message}${a.details ? ` [${a.details}]` : ''}` : typeof a === 'object' ? (() => { try { return JSON.stringify(a); } catch { return String(a); } })() : String(a))).join(' ');
+  debugLines.push(`${new Date().toISOString().slice(11, 23)} ${kind} ${text}`);
+  if (debugLines.length > 300) debugLines.shift();
+  const pre = document.getElementById('debugLog');
+  if (pre && !document.getElementById('debug').hidden) { pre.textContent = debugLines.join('\n'); pre.scrollTop = pre.scrollHeight; }
+}
+for (const kind of ['error', 'warn', 'info']) {
+  const orig = console[kind].bind(console);
+  console[kind] = (...a) => { dlog(kind.toUpperCase(), a); orig(...a); };
+}
+window.addEventListener('error', (e) => dlog('UNCAUGHT', [e.message, `${e.filename}:${e.lineno}`]));
+window.addEventListener('unhandledrejection', (e) => dlog('REJECTION', [e.reason]));
+function showDebug(on) {
+  $('debug').hidden = !on;
+  if (on) { $('debugLog').textContent = debugLines.join('\n'); }
+}
+function bindDebug() {
+  const version = document.querySelector('meta[name="reefhue-version"]')?.content || 'dev';
+  $('version').textContent = version;
+  dlog('INFO', [`Reefhue ${version}`, navigator.userAgent, `cores ${navigator.hardwareConcurrency}`, `memory ${navigator.deviceMemory ?? '?'} GB`,
+    `WebCodecs ${typeof VideoEncoder !== 'undefined'}`, `screen ${screen.width}x${screen.height}@${devicePixelRatio}`]);
+  $('debugLink').onclick = (e) => { e.preventDefault(); showDebug(true); };
+  $('debugClose').onclick = () => showDebug(false);
+  $('debugCopy').onclick = async () => {
+    const text = debugLines.join('\n');
+    try { await navigator.clipboard.writeText(text); toast('Debug log copied.'); } catch {
+      const r = document.createRange(); r.selectNodeContents($('debugLog'));
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      toast('Select-all done: copy with your device menu.');
+    }
+  };
+  if (/debug/.test(location.hash) || /debug/.test(location.search)) showDebug(true);
+}
+
 // ------------------------------------------------------------- wiring
 function bindInputs() {
   $('fileInput').addEventListener('change', (e) => { if (e.target.files.length) addFiles(e.target.files); e.target.value = ''; });
@@ -1158,6 +1199,7 @@ async function loadDemoPhoto(select) {
 }
 
 async function main() {
+  bindDebug();
   buildUI();
   bindStage();
   bindInputs();

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Reefhue</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="reefhue-version" content="dev">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&display=swap">
@@ -152,6 +153,7 @@
     <div class="panel foot">
       <button type="button" id="resetBtn" class="btn ghost">Reset to preset</button>
       <button type="button" id="speedBtn" class="link">Test export speed on this device</button>
+      <span class="version">Version <span id="version">dev</span> · <a href="#debug" id="debugLink">debug log</a></span>
     </div>
   </aside>
 </main>
@@ -203,6 +205,10 @@
 </div>
 
 <div class="toast" id="toast" role="status" hidden></div>
+<section class="debug" id="debug" hidden aria-label="Debug log">
+  <div class="debug-head"><b>Debug log</b><button type="button" class="btn small" id="debugCopy">Copy</button><button type="button" class="btn small ghost" id="debugClose">Close</button></div>
+  <pre id="debugLog"></pre>
+</section>
 <video id="video" playsinline muted preload="auto" hidden></video>
 
 <script type="module" src="app.js"></script>
