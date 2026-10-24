@@ -207,12 +207,14 @@ function syncThisFile() {
 function fitStage() {
   if (!st.srcW) return { w: 0, h: 0 };
   const wrapEl = $('stageWrap');
-  if (window.innerWidth <= 900) {
-    const w = wrapEl.clientWidth - 24;
-    wrapEl.style.height = `${Math.round(Math.min(window.innerHeight * 0.6, (w * st.srcH) / st.srcW) + 24)}px`;
+  const narrow = window.innerWidth <= 900;
+  const pad = narrow ? 12 : 24;
+  if (narrow) {
+    // pinned on top while scrolling the settings, so keep it to ~40% of the screen
+    const w = wrapEl.clientWidth - pad;
+    wrapEl.style.height = `${Math.round(Math.min(window.innerHeight * 0.4, (w * st.srcH) / st.srcW) + pad)}px`;
   } else wrapEl.style.height = '';
   const wrap = wrapEl.getBoundingClientRect();
-  const pad = 24;
   const sc = Math.min((wrap.width - pad) / st.srcW, (wrap.height - pad) / st.srcH);
   const stage = $('stage');
   stage.style.width = `${Math.max(1, Math.floor(st.srcW * sc))}px`;
@@ -1092,6 +1094,15 @@ function showDebug(on) {
   $('debug').hidden = !on;
   if (on) { $('debugLog').textContent = debugLines.join('\n'); }
 }
+// Shadow under the pinned preview once the page scrolls beneath it (phones).
+function watchPinnedPreview() {
+  const pane = $('previewPane');
+  const mark = document.createElement('div');
+  mark.setAttribute('aria-hidden', 'true');
+  pane.before(mark);
+  new IntersectionObserver(([e]) => pane.classList.toggle('stuck', !e.isIntersecting && e.boundingClientRect.top < 0)).observe(mark);
+}
+
 function bindDebug() {
   const version = document.querySelector('meta[name="reefhue-version"]')?.content || 'dev';
   $('version').textContent = version;
@@ -1200,6 +1211,7 @@ async function loadDemoPhoto(select) {
 
 async function main() {
   bindDebug();
+  watchPinnedPreview();
   buildUI();
   bindStage();
   bindInputs();

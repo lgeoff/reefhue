@@ -98,6 +98,7 @@ kbd { font: 600 11px var(--font-body); border: 1px solid var(--line); border-bot
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button.on { background: var(--raise); color: var(--ink); }
 
+.preview-pane { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
 .stage-wrap {
   position: relative; flex: 1 1 auto; min-height: 280px;
   display: grid; place-items: center; overflow: hidden;
@@ -322,10 +323,19 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
   .app, .app.has-queue { grid-template-columns: minmax(0, 1fr); }
   .queue { border-right: 0; border-bottom: 1px solid var(--line); }
   .q-list { max-height: 38vh; }
-  .viewer { border-right: 0; }
-  .stage-wrap { min-height: 0; height: 56vh; }
-  .transport { flex-wrap: wrap; }
-  .transport input[type=range] { flex-basis: 100%; order: 5; }
+  /* The preview pins to the top while the settings scroll under it, so every
+     slider move is visible. .viewer is flattened so the pinned pane's
+     containing block is the whole page, not just the viewer column. */
+  .viewer { display: contents; }
+  .preview-pane {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6;
+    background: var(--ground); border-bottom: 1px solid var(--line);
+    transition: box-shadow 0.15s;
+  }
+  .preview-pane.stuck { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55); }
+  .stage-wrap { min-height: 0; height: 40vh; }
+  .transport { padding-block: 6px; gap: 6px; }
+  .transport .time { font-size: 11.5px; }
   .readout { grid-template-columns: 110px minmax(0, 1fr); }
   .readout .metrics { grid-column: 1 / -1; }
   .inspector { overflow: visible; }
