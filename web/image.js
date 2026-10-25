@@ -78,14 +78,30 @@ const errText = (e) => `${e?.name || 'Error'}: ${e?.message || e}`;
  * and info = {format, w, h, orientation, size, type}.
  */
 export async function loadPhotoFile(file) {
-  let buf;
-  try {
-    buf = await file.arrayBuffer();
-  } catch (e) {
-    const err = new Error(e?.name === 'NotReadableError'
-      ? 'The phone no longer allows reading this file. Add it again; if it is in a cloud folder (Drive, OneDrive…), save it to the phone first.'
+  // Android can rewrite a photo while handing it over (e.g. stripping location
+  // data), so the browser sees it as changed since it was picked and refuses
+  // to read it (NotReadableError). Retry a few times, through different
+  // readers, in case it is momentary.
+  const readers = [
+    () => file.arrayBuffer(),
+    () => new Response(file).arrayBuffer(),
+    () => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsArrayBuffer(file); }),
+  ];
+  const waits = [0, 250, 700, 1500];
+  let buf, last;
+  const attempts = [];
+  for (let i = 0; i < waits.length && !buf; i++) {
+    if (waits[i]) await new Promise((r) => setTimeout(r, waits[i]));
+    try { buf = await readers[i % readers.length](); } catch (e) { last = e; attempts.push(errText(e)); }
+  }
+  if (!buf) {
+    const e = last;
+    const repick = e?.name === 'NotReadableError';
+    const err = new Error(repick
+      ? 'Android didn’t hand this photo over properly. Pick it again: the second time usually works.'
       : `The file could not be read (${errText(e)}). If it is in a cloud folder, save it to the phone first.`);
-    err.details = `${file.name} · ${fmtSize(file.size)} · ${file.type || 'no type'} · read failed: ${errText(e)}`;
+    err.repick = repick;
+    err.details = `${file.name} · ${fmtSize(file.size)} · ${file.type || 'no type'} · modified ${new Date(file.lastModified).toISOString()} · ${attempts.length} read attempts: ${attempts.join(' | ')}`;
     throw err;
   }
   const u8 = new Uint8Array(buf);

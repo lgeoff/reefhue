@@ -100,6 +100,8 @@ python3 tools/bundle.py                    # writes dist/reefhue.html (+ artifac
 
 ## Tests
 
+- `node tests/android-sim.mjs <url> <photo.jpg>` reproduces the Android photo-picker failure (the photo changes between picking and reading, so Chrome throws NotReadableError) in Pixel 7 emulation, and checks the pick-again recovery.
+
 ```sh
 cd engine && cargo test --lib                      # math, neutrality, thumbnail grid, metrics
 python3 tests/eval.py                               # ground-truth accuracy (numpy, scikit-image, node)

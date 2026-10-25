@@ -458,7 +458,11 @@ function addFiles(list) {
     status: 'ready', progress: 0, stateText: 'Ready', result: null,
   }));
   for (const item of added) item.ready = item.kind === 'image' ? readPhoto(item) : Promise.resolve();
-  st.items.push(...added);
+  for (const item of added) {
+    // picked again after Android refused the first copy: take the failed entry's place
+    const k = st.items.findIndex((o) => o.repick && o.name === item.name);
+    if (k >= 0) { console.info('re-picked', item.name); st.items[k] = item; } else st.items.push(item);
+  }
   renderQueue();
   probeAll(added);
   // open the first new file, unless a batch is running and the user is looking at another one
@@ -512,6 +516,7 @@ function readPhoto(item) {
       item.unplayable = true;
       item.stateText = e.message;
       item.errorDetails = e.details || '';
+      item.repick = !!e.repick;
       throw e;
     }
   });
@@ -662,7 +667,7 @@ function syncBatchButtons() {
     if (err) bits.push(`${err} failed`);
     $('qStatus').textContent = bits.length ? bits.join(' · ') : 'Every file uses Auto unless you change its settings. Click a file to preview and adjust it.';
   }
-  $('exportBtn').disabled = !st.cur;
+  syncDownload();
 }
 
 function removeItem(item) {
@@ -693,11 +698,16 @@ async function selectItem(item) {
   syncSliders();
   syncThisFile();
   $('lockAuto').checked = !!item.locked;
+  $('stageMsg').hidden = true;
   const showError = (message, details) => {
     stopVideo(); clearPreview();
+    if (item.repick) {
+      $('stageMsgText').textContent = message;
+      $('stageMsg').hidden = false;
+    }
     $('fileName').textContent = item.name;
-    $('fileMeta').textContent = message;
-    toast(`Could not open ${item.name}: ${message}${details ? `\nDetails: ${details}` : ''}`, 15000);
+    $('fileMeta').textContent = item.repick ? 'Could not be read' : message;
+    if (item.repick) console.error('[reefhue] read', details); else toast(`Could not open ${item.name}: ${message}${details ? `\nDetails: ${details}` : ''}`, 15000);
   };
   if (item.unplayable) { showError(item.stateText, item.errorDetails); return; }
   try {
@@ -722,7 +732,7 @@ function setFileLabel() {
   const extra = st.kind === 'video' ? ` · ${fmtTime(v.duration)} · ${(+st.fps).toFixed(st.fps % 1 ? 2 : 0)} fps` : '';
   const w = st.kind === 'image' && item.w ? item.w : st.srcW, h = st.kind === 'image' && item.h ? item.h : st.srcH;
   $('fileMeta').textContent = `${w}×${h}${extra}`;
-  $('exportBtn').disabled = false;
+  syncDownload();
 }
 
 async function loadImage(item) {
@@ -1241,6 +1251,14 @@ function bindInputs() {
   });
 }
 
+// Download appears once there is something of the user's own (or a demo they
+// opened on purpose): the demo shown on first visit has nothing to download.
+function syncDownload() {
+  const btn = $('exportBtn');
+  btn.hidden = !st.items.some((i) => !i.demo);
+  btn.disabled = !st.cur || st.cur.demo;
+}
+
 async function loadDemoPhoto(select) {
   busy('Drawing the demo reef…', 0.3);
   try {
@@ -1248,6 +1266,7 @@ async function loadDemoPhoto(select) {
     const file = new File([blob], 'demo-reef-9m.jpg', { type: 'image/jpeg' });
     const [item] = addFiles([file]);
     if (item) item.demo = !select;
+    syncDownload();
   } finally { busy(null); }
 }
 

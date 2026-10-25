@@ -78,7 +78,7 @@ const STEPS = [
   {
     target: '#exportBtn',
     title: 'Download',
-    body: 'Saves the restored file at full resolution. Videos are fully processed first, with the original sound kept, then the download starts.',
+    body: () => `${document.querySelector('#exportBtn')?.hidden ? 'Once you add a photo or video, a <b>Download</b> button appears at the top. It saves' : 'Saves'} the restored file at full resolution. Videos are fully processed first, with the original sound kept, then the download starts.`,
   },
   {
     target: '.panel.foot',

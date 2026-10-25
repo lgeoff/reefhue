@@ -18,7 +18,7 @@
 <body>
 <header class="bar">
   <div class="brand">
-    <img class="mark" src="logo.svg" alt="" width="30" height="30">
+    <img class="mark" src="logo.svg" alt="" width="32" height="32">
     <span class="name">Reefhue</span>
     <span class="sub">Underwater colour restore · runs on your machine</span>
   </div>
@@ -30,7 +30,7 @@
     <button type="button" id="helpBtn" class="btn ghost help-btn" aria-label="Help: take a guided tour"><span aria-hidden="true">?</span><span class="help-label">Help</span></button>
     <label class="btn" id="addBtn" for="fileInput">Add photos or videos</label>
     <input type="file" id="fileInput" accept="image/*,video/*,.mov,.mp4,.m4v" multiple hidden>
-    <button type="button" id="exportBtn" class="btn primary" disabled>Download</button>
+    <button type="button" id="exportBtn" class="btn primary" disabled hidden>Download</button>
   </div>
 </header>
 
@@ -83,6 +83,7 @@
         <span class="corner corner-r">After</span>
       </div>
       <div class="drop" id="drop" hidden><div>Drop to add<small>One file opens it · several make a batch · JPEG · PNG · WebP · MP4 · MOV · WebM</small></div></div>
+      <div class="stage-msg" id="stageMsg" hidden><p id="stageMsgText"></p><label class="btn primary" for="fileInput">Pick it again</label></div>
       <div class="busy" id="busy" hidden><div class="busy-card"><span id="busyText">Working…</span><div class="meter"><i id="busyBar"></i></div></div></div>
     </div>
 
