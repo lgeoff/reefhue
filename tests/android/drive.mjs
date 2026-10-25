@@ -47,13 +47,21 @@ function pickerStep(nodes, want, step) {
   // permission prompts
   const allow = find((n) => /^(allow|allow all|while using the app|allow access to all|allow all the time)$/i.test(t(n)) && n.clickable === 'true');
   if (allow) { tap(allow, 'permission'); return true; }
+  // Chrome's photo picker → "Browse" (the system chooser / file manager)
+  if (step.browse && !step.browsed) {
+    const b = find((n) => t(n) === 'Browse' || d(n) === 'Browse');
+    if (b) { tap(b, 'browse'); step.browsed = true; return true; }
+  }
+  // onboarding screens of gallery apps
+  const later = find((n) => /^(not now|no thanks|skip|don.t back up|keep off|got it|continue without|use without an account)$/i.test(t(n)) && n.clickable === 'true');
+  if (later && step.browsed) { tap(later, 'onboarding'); return true; }
   // the file we want, by name (DocumentsUI lists names)
   const byName = find((n) => t(n) === want || d(n).includes(want));
   if (byName) { tap(byName, 'wanted file'); return true; }
   // Chrome's own photo picker (Android < 13): pick the first photo tile, then Done
   const done = find((n) => /^(done|add|select|open|allow)( \(\d+\))?$/i.test(t(n)) && (n.clickable === 'true' || /button/i.test(n.class)));
-  const tiles = nodes.filter((n) => n.x && /bitmap_view|image_view|icon_thumb|photo_picker|thumbnail/i.test(id(n)) && n.w > 100 && n.h > 100);
-  if (tiles.length && step.tiles !== 'done') { tap(tiles[step.tileIndex ?? 0], `photo tile ${step.tileIndex ?? 0} of ${tiles.length}`); step.tiles = 'done'; return true; }
+  const tiles = nodes.filter((n) => n.x && (/bitmap_view|image_view|icon_thumb|photo_picker|thumbnail/i.test(id(n)) || (step.browsed && /photos/.test(n.package) && /ImageView|View/.test(n.class) && n.clickable === 'true')) && n.w > 100 && n.h > 100 && n.w < 700);
+  if (tiles.length && step.tiles !== 'done' && !(step.browse && !step.browsed)) { tap(tiles[step.tileIndex ?? 0], `photo tile ${step.tileIndex ?? 0} of ${tiles.length}`); step.tiles = 'done'; return true; }
   if (done && step.tiles === 'done') { tap(done, 'confirm'); return true; }
   // chooser of apps: prefer the one the scenario names
   if (step.app) {
@@ -70,6 +78,10 @@ function pickerStep(nodes, want, step) {
   if (step.docs === 'roots') {
     const imgs = find((n) => /^(images|downloads|download)$/i.test(t(n)));
     if (imgs) { tap(imgs, 'documents root'); step.docs = 'browsed'; return true; }
+  }
+  if (step.docs === 'browsed') {
+    const cam = find((n) => /^(camera|dcim)$/i.test(t(n)));
+    if (cam) { tap(cam, 'folder'); step.docs = 'folder'; return true; }
   }
   return false;
 }
@@ -110,7 +122,7 @@ for (const sc of scenarios) {
     await sleep(sc.settle ?? 1500);
     if (sc.setup) await page.evaluate(sc.setup);
     await page.click(sc.click, { timeout: 15000 });
-    const step = { app: sc.app, tileIndex: sc.tileIndex, idle: 0 };
+    const step = { app: sc.app, tileIndex: sc.tileIndex, idle: 0, browse: !!sc.browse };
     let finished = false;
     for (let i = 0; i < 14 && !finished; i++) {
       await sleep(1800);
