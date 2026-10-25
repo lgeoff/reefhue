@@ -466,14 +466,42 @@ function addFiles(list) {
   return added;
 }
 
+// Android's picker grants access to the chosen files only as long as the
+// <input> keeps its selection: clearing input.value (the usual trick to allow
+// picking the same file again) can revoke it before the files are read,
+// giving NotReadableError. So each used input is parked, selection intact,
+// and a fresh one takes its place for the next pick.
+function bindPicker(input) {
+  input.addEventListener('change', () => {
+    if (!input.files.length) return;
+    const files = [...input.files];
+    // a new element, not cloneNode(): clones carry the selected files along
+    const fresh = document.createElement('input');
+    for (const a of input.attributes) fresh.setAttribute(a.name, a.value);
+    input.removeAttribute('id');
+    input.replaceWith(fresh);
+    let park = document.getElementById('usedPickers');
+    if (!park) { park = document.createElement('div'); park.id = 'usedPickers'; park.hidden = true; document.body.append(park); }
+    park.append(input);
+    bindPicker(fresh);
+    addFiles(files);
+  });
+}
+
 // Photos are read into memory once, one at a time: files picked through
 // Android's file browser can fail when the same file is read twice at once.
-let photoChain = Promise.resolve();
+const idleChain = Promise.resolve();
+let photoChain = idleChain;
 function readPhoto(item) {
   const original = item.file;
-  photoChain = photoChain.then(async () => {
+  // the first photo starts reading right away, before anything else can run
+  const first = photoChain === idleChain;
+  const early = first ? loadPhotoFile(original) : null;
+  early?.catch(() => {});
+  // a failed photo must not stop the ones after it
+  photoChain = photoChain.catch(() => {}).then(async () => {
     try {
-      const { file, info } = await loadPhotoFile(original);
+      const { file, info } = await (early || loadPhotoFile(original));
       console.info('read', describe(info, item.name));
       item.file = file;
       item.info = info;
@@ -487,7 +515,9 @@ function readPhoto(item) {
       throw e;
     }
   });
-  return photoChain;
+  const mine = photoChain;
+  mine.catch(() => {}).then(() => { if (photoChain === mine) photoChain = idleChain; });
+  return mine;
 }
 
 function photoError(item, e) {
@@ -1135,7 +1165,7 @@ function bindDebug() {
 
 // ------------------------------------------------------------- wiring
 function bindInputs() {
-  $('fileInput').addEventListener('change', (e) => { if (e.target.files.length) addFiles(e.target.files); e.target.value = ''; });
+  bindPicker($('fileInput'));
   let depth = 0;
   window.addEventListener('dragenter', (e) => { if ([...e.dataTransfer.types].includes('Files')) { depth++; $('drop').hidden = false; } });
   window.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; $('drop').hidden = true; } });

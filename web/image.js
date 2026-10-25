@@ -82,7 +82,9 @@ export async function loadPhotoFile(file) {
   try {
     buf = await file.arrayBuffer();
   } catch (e) {
-    const err = new Error(`The file could not be read (${errText(e)}). If it is in a cloud folder, save it to the phone first.`);
+    const err = new Error(e?.name === 'NotReadableError'
+      ? 'The phone no longer allows reading this file. Add it again; if it is in a cloud folder (Drive, OneDrive…), save it to the phone first.'
+      : `The file could not be read (${errText(e)}). If it is in a cloud folder, save it to the phone first.`);
     err.details = `${file.name} · ${fmtSize(file.size)} · ${file.type || 'no type'} · read failed: ${errText(e)}`;
     throw err;
   }
