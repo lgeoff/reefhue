@@ -2678,8 +2678,11 @@ function parseHeif(u8) {
   if (!t0 || t0.type !== 'hvc1') throw new Error('This HEIC file has no HEVC tiles.');
   const hvcC = prop(t0, 'hvcC');
   const tileSize = size(t0);
+  // colour description (nclx) from the tile or the main item
+  const colr = [prop(t0, 'colr'), prop(main, 'colr')].find((b) => b && fourcc(u8, b.body) === 'nclx');
+  const nclx = colr ? { primaries: dv.getUint16(colr.body + 4), transfer: dv.getUint16(colr.body + 6), matrix: dv.getUint16(colr.body + 8), fullRange: (u8[colr.body + 10] & 0x80) !== 0 } : null;
   return {
-    ...layout, transforms, tileW: tileSize?.w, tileH: tileSize?.h,
+    ...layout, transforms, nclx, tileW: tileSize?.w, tileH: tileSize?.h,
     hvcC: u8.slice(hvcC.body, hvcC.end),
     tileData: (i) => dataOf(layout.tiles[i]),
   };
@@ -2695,6 +2698,20 @@ function hevcCodec(c) {
   return ['hvc1', `${['', 'A', 'B', 'C'][space]}${profile}`, (rev >>> 0).toString(16).toUpperCase(), `${tier ? 'H' : 'L'}${c[12]}`, ...cons.map((b) => b.toString(16).toUpperCase())].join('.');
 }
 
+// nclx codes (ISO/IEC 23091-2) to WebCodecs colour space. Without a colr box,
+// BT.601 limited range, the usual default for HEVC stills.
+function colorSpace(n) {
+  if (!n) return { primaries: 'bt709', transfer: 'iec61966-2-1', matrix: 'smpte170m', fullRange: false };
+  const P = { 1: 'bt709', 5: 'bt470bg', 6: 'smpte170m', 9: 'bt2020', 12: 'smpte432' };
+  const T = { 1: 'bt709', 6: 'smpte170m', 8: 'linear', 13: 'iec61966-2-1', 16: 'pq', 18: 'hlg' };
+  const M = { 0: 'rgb', 1: 'bt709', 5: 'bt470bg', 6: 'smpte170m', 9: 'bt2020-ncl' };
+  const cs = { fullRange: n.fullRange };
+  if (P[n.primaries]) cs.primaries = P[n.primaries];
+  if (T[n.transfer]) cs.transfer = T[n.transfer];
+  if (M[n.matrix]) cs.matrix = M[n.matrix];
+  return cs;
+}
+
 /** Decode a HEIC to JPEG bytes. Resolves {bytes, w, h, note}. */
 async function heicToJpeg(u8, name) {
   const notSupported = () => {
@@ -2705,7 +2722,7 @@ async function heicToJpeg(u8, name) {
   if (typeof VideoDecoder === 'undefined') throw notSupported();
   const h = parseHeif(u8);
   const codec = hevcCodec(h.hvcC);
-  const config = { codec, description: h.hvcC, optimizeForLatency: true };
+  const config = { codec, description: h.hvcC, optimizeForLatency: true, colorSpace: colorSpace(h.nclx) };
   const ok = await VideoDecoder.isConfigSupported(config).then((r) => r.supported, () => false);
   if (!ok) throw notSupported();
 
