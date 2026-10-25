@@ -1,0 +1,4 @@
+package:org.chromium.chrome
+package:com.android.chrome
+    versionName=158.0.8125.0
+    versionName=74.0.3729.185
