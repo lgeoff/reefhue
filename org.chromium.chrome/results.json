@@ -1,0 +1,34 @@
+{
+  "browse-Files-gps-sizefirst": [],
+  "browse-Files-gps-readfirst": [],
+  "browse-Files-nogps-sizefirst": [],
+  "browse-Files-gps-opfs": [],
+  "browse-Files-app-main": {
+    "name": "demo-reef-9m.jpg",
+    "status": "ready",
+    "state": "Ready",
+    "info": "1600x1067"
+  },
+  "browse-Files-app-fixed": {
+    "name": "demo-reef-9m.jpg",
+    "status": "ready",
+    "state": "Ready",
+    "info": "1600x1067"
+  },
+  "browse-Photos-gps-sizefirst": [],
+  "browse-Photos-gps-readfirst": [],
+  "browse-Photos-nogps-sizefirst": [],
+  "browse-Photos-gps-opfs": [],
+  "browse-Photos-app-main": {
+    "name": "demo-reef-9m.jpg",
+    "status": "ready",
+    "state": "Ready",
+    "info": "1600x1067"
+  },
+  "browse-Photos-app-fixed": {
+    "name": "demo-reef-9m.jpg",
+    "status": "ready",
+    "state": "Ready",
+    "info": "1600x1067"
+  }
+}

@@ -1,0 +1,131 @@
+device sdk_gphone64_x86_64 Android 14 org.chromium.chrome
+browser 158.0.8125.0
+
+== browse-Files-gps-sizefirst
+  [page] Failed to load resource: the server responded with a status of 404 (File not found)
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT []
+
+== browse-Files-gps-readfirst
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT []
+
+== browse-Files-nogps-sizefirst
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT []
+
+== browse-Files-gps-opfs
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT []
+
+== browse-Files-app-main
+  [page] picked demo-reef-9m.jpg 188596 bytes type "image/jpeg"
+  [page] read demo-reef-9m.jpg · JPEG 1600×1067 · 0.2 MB · type "image/jpeg"
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT {"name":"demo-reef-9m.jpg","status":"ready","state":"Ready","info":"1600x1067"}
+
+== browse-Files-app-fixed
+  [page] picked demo-reef-9m.jpg type "image/jpeg"
+  [page] read demo-reef-9m.jpg · JPEG 1600×1067 · 0.2 MB · type "image/jpeg"
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT {"name":"demo-reef-9m.jpg","status":"ready","state":"Ready","info":"1600x1067"}
+
+== browse-Photos-gps-sizefirst
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  tap "Photos" (chooser app) at 396,359
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 3: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT []
+
+== browse-Photos-gps-readfirst
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  tap "Photos" (chooser app) at 396,359
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 3: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT []
+
+== browse-Photos-nogps-sizefirst
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  tap "Photos" (chooser app) at 396,359
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 3: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT []
+
+== browse-Photos-gps-opfs
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  tap "Photos" (chooser app) at 396,359
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 3: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT []
+
+== browse-Photos-app-main
+  [page] picked demo-reef-9m.jpg 188596 bytes type "image/jpeg"
+  [page] read demo-reef-9m.jpg · JPEG 1600×1067 · 0.2 MB · type "image/jpeg"
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  tap "Photos" (chooser app) at 396,359
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 3: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT {"name":"demo-reef-9m.jpg","status":"ready","state":"Ready","info":"1600x1067"}
+
+== browse-Photos-app-fixed
+  [page] picked demo-reef-9m.jpg type "image/jpeg"
+  [page] read demo-reef-9m.jpg · JPEG 1600×1067 · 0.2 MB · type "image/jpeg"
+  screen 0: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  tap "Photos" (chooser app) at 396,359
+  screen 1: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 2: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  screen 3: com.google.android.providers.media.module | This app can only access the photos you select <privacy_text> | Recent <date_header_title> | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Photo taken on Oct 25, 2026, 8:27:44 PM | Cancel | Photos | Photos | Albums | Albums | More options
+  (nothing to tap)
+  RESULT {"name":"demo-reef-9m.jpg","status":"ready","state":"Ready","info":"1600x1067"}
