@@ -24,10 +24,11 @@ await ctx.addInitScript(() => {
   let release;
   window.__gate = new Promise((r) => { release = r; });
   window.__release = () => release();
-  let first = true;
+  // the first read of each picked photo (Android-style numeric names) waits
+  const held = new Set();
   const orig = Blob.prototype.arrayBuffer;
   Blob.prototype.arrayBuffer = async function () {
-    if (first && this instanceof File && this.name === '1000053458.jpg') { first = false; await window.__gate; }
+    if (this instanceof File && /^1000\d+\.jpg$/.test(this.name) && !held.has(this.name)) { held.add(this.name); await window.__gate; }
     return orig.call(this);
   };
 });
@@ -57,7 +58,7 @@ console.log('first pick:', JSON.stringify(first));
 await page.screenshot({ path: join(dir, 'first-pick.png') });
 
 // 3. the user taps "Pick it again" and chooses the same photo
-[chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#stageMsg label')]);
+[chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#stageMsg label[for=fileInput]')]);
 await chooser.setFiles(picked);
 await page.waitForFunction(() => { const c = window.reefhue.cur; return c?.info && window.reefhue.srcW === c.info.w && !window.reefhue.items.some((i) => i.status === 'error'); }, null, { timeout: 20000 }).catch(() => {});
 await page.waitForTimeout(500);
@@ -65,7 +66,28 @@ const second = await state();
 console.log('second pick:', JSON.stringify(second));
 await page.screenshot({ path: join(dir, 'second-pick.png') });
 
-const ok = first.pickAgain && second.items.length === 1 && second.items[0].endsWith(':ready') && !second.pickAgain;
+// 4. a batch: two more photos picked at once, both refused, then both picked again
+const batch = [join(dir, '1000053308.jpg'), join(dir, '1000053490.jpg')];
+for (const p of batch) copyFileSync(photo, p);
+await page.evaluate(() => { let r; window.__gate = new Promise((x) => { r = x; }); window.__release = () => r(); });
+[chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#addBtn')]);
+await chooser.setFiles(batch);
+for (const p of batch) appendFileSync(p, Buffer.alloc(16));
+await page.evaluate(() => window.__release());
+await page.waitForFunction(() => window.reefhue.items.filter((i) => i.status === 'error').length === 2, null, { timeout: 20000 }).catch(() => {});
+await page.waitForTimeout(500);
+const third = await state();
+third.text = await page.textContent('#stageMsgText');
+console.log('batch pick:', JSON.stringify(third));
+await page.screenshot({ path: join(dir, 'batch-pick.png') });
+[chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#stageMsg label[for=fileInput]')]);
+await chooser.setFiles(batch);
+await page.waitForFunction(() => window.reefhue.items.length === 3 && window.reefhue.items.every((i) => i.info) && window.reefhue.srcW === window.reefhue.cur.info.w, null, { timeout: 20000 }).catch(() => {});
+const fourth = await state();
+console.log('batch picked again:', JSON.stringify(fourth));
+
+const ok = first.pickAgain && second.items.length === 1 && second.items[0].endsWith(':ready') && !second.pickAgain
+  && third.pickAgain && /these 2 photos/.test(third.text) && fourth.items.length === 3 && fourth.items.every((i) => i.endsWith(':ready')) && !fourth.pickAgain;
 console.log(ok ? 'PASS' : 'FAIL', `· page errors: ${errors.length ? errors.join(' | ') : 'none'} · screenshots in ${dir}`);
 await browser.close();
 process.exit(ok ? 0 : 1);

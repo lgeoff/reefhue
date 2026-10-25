@@ -396,7 +396,9 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
   position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px;
   padding: 16px; text-align: center; background: rgba(20, 21, 21, 0.82); z-index: 3;
 }
-.stage-msg p { margin: 0; max-width: 34ch; }
+.stage-msg p { margin: 0; max-width: 38ch; }
+.stage-msg-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.q-thumb-empty { display: grid; place-items: center; background: var(--raise); color: var(--muted); font-size: 20px; }
 </style>
 <header class="bar">
   <div class="brand">
@@ -412,7 +414,8 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
     <button type="button" id="helpBtn" class="btn ghost help-btn" aria-label="Help: take a guided tour"><span aria-hidden="true">?</span><span class="help-label">Help</span></button>
     <label class="btn" id="addBtn" for="fileInput">Add photos or videos</label>
     <input type="file" id="fileInput" accept="image/*,video/*,.mov,.mp4,.m4v" multiple hidden>
-    <button type="button" id="exportBtn" class="btn primary" disabled>Download</button>
+    <input type="file" id="fileInputAny" multiple hidden>
+    <button type="button" id="exportBtn" class="btn primary" disabled hidden>Download</button>
   </div>
 </header>
 
@@ -465,7 +468,7 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
         <span class="corner corner-r">After</span>
       </div>
       <div class="drop" id="drop" hidden><div>Drop to add<small>One file opens it · several make a batch · JPEG · PNG · WebP · MP4 · MOV · WebM</small></div></div>
-      <div class="stage-msg" id="stageMsg" hidden><p id="stageMsgText"></p><label class="btn primary" for="fileInput">Pick it again</label></div>
+      <div class="stage-msg" id="stageMsg" hidden><p id="stageMsgText"></p><div class="stage-msg-actions"><label class="btn primary" for="fileInput">Pick again</label><label class="btn" for="fileInputAny">Browse files instead</label></div></div>
       <div class="busy" id="busy" hidden><div class="busy-card"><span id="busyText">Working…</span><div class="meter"><i id="busyBar"></i></div></div></div>
     </div>
 
@@ -2027,7 +2030,7 @@ async function loadPhotoFile(file) {
     const e = last;
     const repick = e?.name === 'NotReadableError';
     const err = new Error(repick
-      ? 'Android didn’t hand this photo over properly. Pick it again: the second time usually works.'
+      ? 'Android didn’t hand this photo over properly. Pick the same photo again: the second time works.'
       : `The file could not be read (${errText(e)}). If it is in a cloud folder, save it to the phone first.`);
     err.repick = repick;
     err.details = `${file.name} · ${fmtSize(file.size)} · ${file.type || 'no type'} · modified ${new Date(file.lastModified).toISOString()} · ${attempts.length} read attempts: ${attempts.join(' | ')}`;
@@ -2939,7 +2942,7 @@ const STEPS = [
   {
     target: '#exportBtn',
     title: 'Download',
-    body: 'Saves the restored file at full resolution. Videos are fully processed first, with the original sound kept, then the download starts.',
+    body: () => `${document.querySelector('#exportBtn')?.hidden ? 'Once you add a photo or video, a <b>Download</b> button appears at the top. It saves' : 'Saves'} the restored file at full resolution. Videos are fully processed first, with the original sound kept, then the download starts.`,
   },
   {
     target: '.panel.foot',
@@ -3636,6 +3639,8 @@ function readPhoto(item) {
       item.stateText = e.message;
       item.errorDetails = e.details || '';
       item.repick = !!e.repick;
+      console.error('[reefhue] could not read', item.name, '·', e.details || e.message);
+      refreshRepick();
       throw e;
     }
   });
@@ -3644,9 +3649,16 @@ function readPhoto(item) {
   return mine;
 }
 
+/** Text of the pick-again panel, counting every photo that is waiting for it. */
+function refreshRepick() {
+  if ($('stageMsg').hidden) return;
+  const n = st.items.filter((i) => i.repick && i.status === 'error').length;
+  $('stageMsgText').innerHTML = `Android didn’t hand ${n > 1 ? `these ${n} photos` : 'this photo'} over properly, a known Chrome-on-Android glitch with the first pick. Pick <b>the same ${n > 1 ? 'photos' : 'photo'}</b> again: the second time works.`;
+}
+
 function photoError(item, e) {
   const details = [item.info ? describe(item.info, item.name) : item.name, e.details || item.errorDetails].filter(Boolean).join(' — ');
-  console.error('[reefhue] photo', details, e);
+  if (!item.repick) console.error('[reefhue] photo', details, e);
   return { message: e.message || String(e), details };
 }
 
@@ -3724,10 +3736,10 @@ function itemMeta(item) {
 function itemHTML(item) {
   const custom = isCustom(item);
   return `<button type="button" class="q-main" data-act="select">
-      <img class="q-thumb" alt="" src="${item.thumbUrl || 'data:image/gif;base64,R0lGODlhAQABAAAAACw='}">
+      ${item.thumbUrl ? `<img class="q-thumb" alt="" src="${item.thumbUrl}">` : `<span class="q-thumb q-thumb-empty" aria-hidden="true">${item.repick ? '↻' : ''}</span>`}
       <span class="q-name" title="${esc(item.name)}">${esc(item.name)}</span>
       <span class="q-meta">${esc(itemMeta(item))}</span>
-      <span class="q-line"><span class="q-chip${custom ? ' custom' : ''}">${esc(chipLabel(item))}</span><span class="q-state">${esc(item.stateText)}</span></span>
+      <span class="q-line"><span class="q-chip${custom ? ' custom' : ''}">${esc(chipLabel(item))}</span><span class="q-state">${esc(item.repick && item.status === 'error' ? 'Not read: pick it again' : item.stateText)}</span></span>
       <i class="q-bar" style="--p:${(item.progress * 100).toFixed(1)}%"></i>
     </button>
     <button type="button" class="q-x" data-act="remove" aria-label="Remove ${esc(item.name)}" title="Remove">×</button>
@@ -3786,7 +3798,7 @@ function syncBatchButtons() {
     if (err) bits.push(`${err} failed`);
     $('qStatus').textContent = bits.length ? bits.join(' · ') : 'Every file uses Auto unless you change its settings. Click a file to preview and adjust it.';
   }
-  $('exportBtn').disabled = !st.cur;
+  syncDownload();
 }
 
 function removeItem(item) {
@@ -3820,20 +3832,17 @@ async function selectItem(item) {
   $('stageMsg').hidden = true;
   const showError = (message, details) => {
     stopVideo(); clearPreview();
-    if (item.repick) {
-      $('stageMsgText').textContent = message;
-      $('stageMsg').hidden = false;
-    }
+    if (item.repick) { $('stageMsg').hidden = false; refreshRepick(); }
     $('fileName').textContent = item.name;
     $('fileMeta').textContent = item.repick ? 'Could not be read' : message;
-    if (item.repick) console.error('[reefhue] read', details); else toast(`Could not open ${item.name}: ${message}${details ? `\nDetails: ${details}` : ''}`, 15000);
+    if (!item.repick) toast(`Could not open ${item.name}: ${message}${details ? `\nDetails: ${details}` : ''}`, 15000);
   };
   if (item.unplayable) { showError(item.stateText, item.errorDetails); return; }
   try {
     if (item.kind === 'video') await loadVideo(item);
     else await loadImage(item);
   } catch (err) {
-    console.error(err);
+    if (!item.repick) console.error(err);
     if (st.cur !== item) return;
     if (item.kind === 'image') {
       const pe = photoError(item, err);
@@ -3851,7 +3860,7 @@ function setFileLabel() {
   const extra = st.kind === 'video' ? ` · ${fmtTime(v.duration)} · ${(+st.fps).toFixed(st.fps % 1 ? 2 : 0)} fps` : '';
   const w = st.kind === 'image' && item.w ? item.w : st.srcW, h = st.kind === 'image' && item.h ? item.h : st.srcH;
   $('fileMeta').textContent = `${w}×${h}${extra}`;
-  $('exportBtn').disabled = false;
+  syncDownload();
 }
 
 async function loadImage(item) {
@@ -4295,6 +4304,7 @@ function bindDebug() {
 // ------------------------------------------------------------- wiring
 function bindInputs() {
   bindPicker($('fileInput'));
+  bindPicker($('fileInputAny'));
   let depth = 0;
   window.addEventListener('dragenter', (e) => { if ([...e.dataTransfer.types].includes('Files')) { depth++; $('drop').hidden = false; } });
   window.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; $('drop').hidden = true; } });
@@ -4370,6 +4380,14 @@ function bindInputs() {
   });
 }
 
+// Download appears once there is something of the user's own (or a demo they
+// opened on purpose): the demo shown on first visit has nothing to download.
+function syncDownload() {
+  const btn = $('exportBtn');
+  btn.hidden = !st.items.some((i) => !i.demo);
+  btn.disabled = !st.cur || st.cur.demo;
+}
+
 async function loadDemoPhoto(select) {
   busy('Drawing the demo reef…', 0.3);
   try {
@@ -4377,6 +4395,7 @@ async function loadDemoPhoto(select) {
     const file = new File([blob], 'demo-reef-9m.jpg', { type: 'image/jpeg' });
     const [item] = addFiles([file]);
     if (item) item.demo = !select;
+    syncDownload();
   } finally { busy(null); }
 }
 

@@ -98,7 +98,7 @@ export async function loadPhotoFile(file) {
     const e = last;
     const repick = e?.name === 'NotReadableError';
     const err = new Error(repick
-      ? 'Android didn’t hand this photo over properly. Pick it again: the second time usually works.'
+      ? 'Android didn’t hand this photo over properly. Pick the same photo again: the second time works.'
       : `The file could not be read (${errText(e)}). If it is in a cloud folder, save it to the phone first.`);
     err.repick = repick;
     err.details = `${file.name} · ${fmtSize(file.size)} · ${file.type || 'no type'} · modified ${new Date(file.lastModified).toISOString()} · ${attempts.length} read attempts: ${attempts.join(' | ')}`;

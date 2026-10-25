@@ -517,6 +517,8 @@ function readPhoto(item) {
       item.stateText = e.message;
       item.errorDetails = e.details || '';
       item.repick = !!e.repick;
+      console.error('[reefhue] could not read', item.name, '·', e.details || e.message);
+      refreshRepick();
       throw e;
     }
   });
@@ -525,9 +527,16 @@ function readPhoto(item) {
   return mine;
 }
 
+/** Text of the pick-again panel, counting every photo that is waiting for it. */
+function refreshRepick() {
+  if ($('stageMsg').hidden) return;
+  const n = st.items.filter((i) => i.repick && i.status === 'error').length;
+  $('stageMsgText').innerHTML = `Android didn’t hand ${n > 1 ? `these ${n} photos` : 'this photo'} over properly, a known Chrome-on-Android glitch with the first pick. Pick <b>the same ${n > 1 ? 'photos' : 'photo'}</b> again: the second time works.`;
+}
+
 function photoError(item, e) {
   const details = [item.info ? describe(item.info, item.name) : item.name, e.details || item.errorDetails].filter(Boolean).join(' — ');
-  console.error('[reefhue] photo', details, e);
+  if (!item.repick) console.error('[reefhue] photo', details, e);
   return { message: e.message || String(e), details };
 }
 
@@ -605,10 +614,10 @@ function itemMeta(item) {
 function itemHTML(item) {
   const custom = isCustom(item);
   return `<button type="button" class="q-main" data-act="select">
-      <img class="q-thumb" alt="" src="${item.thumbUrl || 'data:image/gif;base64,R0lGODlhAQABAAAAACw='}">
+      ${item.thumbUrl ? `<img class="q-thumb" alt="" src="${item.thumbUrl}">` : `<span class="q-thumb q-thumb-empty" aria-hidden="true">${item.repick ? '↻' : ''}</span>`}
       <span class="q-name" title="${esc(item.name)}">${esc(item.name)}</span>
       <span class="q-meta">${esc(itemMeta(item))}</span>
-      <span class="q-line"><span class="q-chip${custom ? ' custom' : ''}">${esc(chipLabel(item))}</span><span class="q-state">${esc(item.stateText)}</span></span>
+      <span class="q-line"><span class="q-chip${custom ? ' custom' : ''}">${esc(chipLabel(item))}</span><span class="q-state">${esc(item.repick && item.status === 'error' ? 'Not read: pick it again' : item.stateText)}</span></span>
       <i class="q-bar" style="--p:${(item.progress * 100).toFixed(1)}%"></i>
     </button>
     <button type="button" class="q-x" data-act="remove" aria-label="Remove ${esc(item.name)}" title="Remove">×</button>
@@ -701,20 +710,17 @@ async function selectItem(item) {
   $('stageMsg').hidden = true;
   const showError = (message, details) => {
     stopVideo(); clearPreview();
-    if (item.repick) {
-      $('stageMsgText').textContent = message;
-      $('stageMsg').hidden = false;
-    }
+    if (item.repick) { $('stageMsg').hidden = false; refreshRepick(); }
     $('fileName').textContent = item.name;
     $('fileMeta').textContent = item.repick ? 'Could not be read' : message;
-    if (item.repick) console.error('[reefhue] read', details); else toast(`Could not open ${item.name}: ${message}${details ? `\nDetails: ${details}` : ''}`, 15000);
+    if (!item.repick) toast(`Could not open ${item.name}: ${message}${details ? `\nDetails: ${details}` : ''}`, 15000);
   };
   if (item.unplayable) { showError(item.stateText, item.errorDetails); return; }
   try {
     if (item.kind === 'video') await loadVideo(item);
     else await loadImage(item);
   } catch (err) {
-    console.error(err);
+    if (!item.repick) console.error(err);
     if (st.cur !== item) return;
     if (item.kind === 'image') {
       const pe = photoError(item, err);
@@ -1176,6 +1182,7 @@ function bindDebug() {
 // ------------------------------------------------------------- wiring
 function bindInputs() {
   bindPicker($('fileInput'));
+  bindPicker($('fileInputAny'));
   let depth = 0;
   window.addEventListener('dragenter', (e) => { if ([...e.dataTransfer.types].includes('Files')) { depth++; $('drop').hidden = false; } });
   window.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; $('drop').hidden = true; } });

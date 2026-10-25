@@ -388,4 +388,6 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
   position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px;
   padding: 16px; text-align: center; background: rgba(20, 21, 21, 0.82); z-index: 3;
 }
-.stage-msg p { margin: 0; max-width: 34ch; }
+.stage-msg p { margin: 0; max-width: 38ch; }
+.stage-msg-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.q-thumb-empty { display: grid; place-items: center; background: var(--raise); color: var(--muted); font-size: 20px; }
