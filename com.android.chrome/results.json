@@ -1,0 +1,122 @@
+{
+  "mixed-sizefirst-photos": [
+    {
+      "input": "mixed",
+      "strategy": "size-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:19:00.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 193
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "size-first",
+      "count": 1
+    }
+  ],
+  "mixed-readfirst-photos": [
+    {
+      "input": "mixed",
+      "strategy": "read-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:19:00.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 105
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "read-first",
+      "count": 1
+    }
+  ],
+  "mixed-sizefirst-files": [
+    {
+      "input": "mixed",
+      "strategy": "size-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:19:00.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 129
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "size-first",
+      "count": 1
+    }
+  ],
+  "images-sizefirst": [
+    {
+      "input": "images",
+      "strategy": "size-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:19:00.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 115
+    },
+    {
+      "done": true,
+      "input": "images",
+      "strategy": "size-first",
+      "count": 1
+    }
+  ],
+  "images-readfirst": [
+    {
+      "input": "images",
+      "strategy": "read-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:19:00.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 136
+    },
+    {
+      "done": true,
+      "input": "images",
+      "strategy": "read-first",
+      "count": 1
+    }
+  ],
+  "mixedext-sizefirst": [
+    {
+      "input": "mixedext",
+      "strategy": "size-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:19:00.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 130
+    },
+    {
+      "done": true,
+      "input": "mixedext",
+      "strategy": "size-first",
+      "count": 1
+    }
+  ],
+  "app-current": {
+    "name": "DIVE_GPS_2.jpg",
+    "status": "ready",
+    "state": "Ready",
+    "info": "2000x1333"
+  }
+}

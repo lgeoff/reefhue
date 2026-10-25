@@ -1,0 +1,184 @@
++ adb shell getprop ro.build.version.release
+14
++ adb root
++ sleep 3
++ adb wait-for-device
++ adb shell settings put global package_verifier_enable 0
++ adb shell settings put global hide_error_dialogs 1
++ adb shell settings put secure anr_show_background 0
++ sleep 45
++ adb shell input keyevent KEYCODE_HOME
+++ curl -s https://commondatastorage.googleapis.com/chromium-browser-snapshots/AndroidDesktop_x64/LAST_CHANGE
++ REV=1726651
++ curl -s 'https://storage.googleapis.com/storage/v1/b/chromium-browser-snapshots/o?prefix=AndroidDesktop_x64/1726651/&fields=items(name,size)'
++ tee out/chromium-files.json
++ head -c 3000
+{
+  "items": [
+    {
+      "name": "AndroidDesktop_x64/1726651/REVISIONS",
+      "size": "660"
+    },
+    {
+      "name": "AndroidDesktop_x64/1726651/chrome-android-desktop.zip",
+      "size": "504839028"
+    }
+  ]
+}
++ echo
+
+++ sed 's/.*"\(AndroidDesktop[^"]*\)"/\1/'
+++ grep -o '"name": *"[^"]*\.zip"' out/chromium-files.json
+++ grep -iE 'chrome-android|apks|chrome'
+++ head -1
++ ZIP=AndroidDesktop_x64/1726651/chrome-android-desktop.zip
++ echo 'zip: AndroidDesktop_x64/1726651/chrome-android-desktop.zip'
+zip: AndroidDesktop_x64/1726651/chrome-android-desktop.zip
++ '[' -n AndroidDesktop_x64/1726651/chrome-android-desktop.zip ']'
++ curl -s -o /tmp/chromium.zip https://storage.googleapis.com/chromium-browser-snapshots/AndroidDesktop_x64/1726651/chrome-android-desktop.zip
++ unzip -q -o /tmp/chromium.zip -d /tmp/chromium
++ find /tmp/chromium -name '*.apk' -o -name '*.apks'
++ head -20
++ tee out/apks.txt
+/tmp/chromium/chrome-android-desktop/apks/SystemWebViewShell.apk
+/tmp/chromium/chrome-android-desktop/apks/ContentShell.apk
+/tmp/chromium/chrome-android-desktop/apks/SystemWebView.apk
+/tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk
+++ find /tmp/chromium -iname ChromePublic.apk
+++ head -1
++ APK=/tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk
++ '[' -z /tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk ']'
++ '[' -n /tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk ']'
++ adb install -r -g /tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk
++ tee out/install.txt
+Performing Streamed Install
+Success
++ adb shell pm list packages
++ tee out/browsers.txt
++ grep -iE chrom
+package:com.android.chrome
+package:org.chromium.chrome
++ adb shell dumpsys package org.chromium.chrome
++ grep -E versionName
++ head -1
++ tee -a out/browsers.txt
+    versionName=158.0.8125.0
++ tee -a out/browsers.txt
++ adb shell dumpsys package com.android.chrome
++ grep -E versionName
++ head -1
+    versionName=113.0.5672.136
++ python3 tests/android/make-photos.py tests/android/src.jpg /tmp/photos
+photos in /tmp/photos
++ adb shell mkdir -p /sdcard/DCIM/Camera
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_NOGPS_1.jpg /sdcard/DCIM/Camera/DIVE_NOGPS_1.jpg
+/tmp/photos/DIVE_NOGPS_1.jpg: 1 file pushed, 0 skipped. 4.5 MB/s (435537 bytes in 0.092s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_NOGPS_1.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_GPS_1.jpg /sdcard/DCIM/Camera/DIVE_GPS_1.jpg
+/tmp/photos/DIVE_GPS_1.jpg: 1 file pushed, 0 skipped. 215.5 MB/s (435663 bytes in 0.002s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_GPS_1.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_NOGPS_2.jpg /sdcard/DCIM/Camera/DIVE_NOGPS_2.jpg
+/tmp/photos/DIVE_NOGPS_2.jpg: 1 file pushed, 0 skipped. 276.7 MB/s (435537 bytes in 0.002s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_NOGPS_2.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_GPS_2.jpg /sdcard/DCIM/Camera/DIVE_GPS_2.jpg
+/tmp/photos/DIVE_GPS_2.jpg: 1 file pushed, 0 skipped. 258.6 MB/s (435663 bytes in 0.002s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_GPS_2.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ adb shell content query --uri content://media/external/images/media --projection _id:_display_name:date_modified
++ tee out/mediastore.txt
+Row: 0 _id=1000000019, _display_name=DIVE_NOGPS_1.jpg, date_modified=1792959540
+Row: 1 _id=1000000020, _display_name=DIVE_GPS_1.jpg, date_modified=1792959540
+Row: 2 _id=1000000021, _display_name=DIVE_NOGPS_2.jpg, date_modified=1792959540
+Row: 3 _id=1000000022, _display_name=DIVE_GPS_2.jpg, date_modified=1792959540
++ python3 -m http.server 8000
++ adb reverse tcp:8000 tcp:8000
+8000
++ npm i --no-save --silent playwright@1.48.2
++ npx playwright --version
+Version 1.48.2
++ for PKG in org.chromium.chrome com.android.chrome
++ '[' -n com.android.chrome ']'
++ '[' org.chromium.chrome '!=' com.android.chrome ']'
++ continue
++ for PKG in org.chromium.chrome com.android.chrome
++ '[' -n com.android.chrome ']'
++ '[' com.android.chrome '!=' com.android.chrome ']'
++ grep -q com.android.chrome
++ adb shell pm list packages
++ PKG=com.android.chrome
++ node tests/android/drive.mjs out/com.android.chrome tests/android/scenarios.json
+device sdk_gphone64_x86_64 Android 14 com.android.chrome
+  tap "No thanks" (first run) at 567,1674
+browser 113.0.5672.136
+
+== mixed-sizefirst-photos
+  [page] Failed to load resource: the server responded with a status of 404 (File not found)
+  screen 0: com.google.android.permissioncontroller | Allow Chrome to access photos and videos on this device? <permission_message> | Select photos and videos <permission_allow_selected_button> | Allow all <permission_allow_all_button> | Don’t allow <permission_deny_button>
+  tap "Allow all" (permission) at 540,1297
+  screen 1: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 2: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  RESULT [{"input":"mixed","strategy":"size-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:19:00.000Z","ok":true,"bytes":435663,"size":435663,"ms":193},{"done":true,"input":"mixed","strategy":"size-first","count":1}]
+
+== mixed-readfirst-photos
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  RESULT [{"input":"mixed","strategy":"read-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:19:00.000Z","ok":true,"bytes":435663,"size":435663,"ms":105},{"done":true,"input":"mixed","strategy":"read-first","count":1}]
+
+== mixed-sizefirst-files
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  RESULT [{"input":"mixed","strategy":"size-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:19:00.000Z","ok":true,"bytes":435663,"size":435663,"ms":129},{"done":true,"input":"mixed","strategy":"size-first","count":1}]
+
+== images-sizefirst
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  RESULT [{"input":"images","strategy":"size-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:19:00.000Z","ok":true,"bytes":435663,"size":435663,"ms":115},{"done":true,"input":"images","strategy":"size-first","count":1}]
+
+== images-readfirst
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  RESULT [{"input":"images","strategy":"read-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:19:00.000Z","ok":true,"bytes":435663,"size":435663,"ms":136},{"done":true,"input":"images","strategy":"read-first","count":1}]
+
+== mixedext-sizefirst
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  RESULT [{"input":"mixedext","strategy":"size-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:19:00.000Z","ok":true,"bytes":435663,"size":435663,"ms":130},{"done":true,"input":"mixedext","strategy":"size-first","count":1}]
+
+== app-current
+  [page] picked demo-reef-9m.jpg 186820 bytes type "image/jpeg"
+  [page] read demo-reef-9m.jpg · JPEG 1600×1067 · 0.2 MB · type "image/jpeg"
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:39 PM | 1000000021 Jan 21, 1970 6:02:39 PM | 1000000020 Jan 21, 1970 6:02:39 PM | 1000000019 Jan 21, 1970 6:02:39 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  [page] picked DIVE_GPS_2.jpg 435663 bytes type "image/jpeg"
+  [page] read DIVE_GPS_2.jpg · JPEG 2000×1333 · 0.4 MB · type "image/jpeg"
+  RESULT {"name":"DIVE_GPS_2.jpg","status":"ready","state":"Ready","info":"2000x1333"}
++ adb logcat -d -t 3000
