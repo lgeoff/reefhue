@@ -1,0 +1,114 @@
++ adb shell getprop ro.build.version.release
+10
++ adb shell settings put global package_verifier_enable 0
++ adb shell settings put global hide_error_dialogs 1
++ adb shell settings put secure anr_show_background 0
++ sleep 45
++ adb shell input keyevent KEYCODE_HOME
+++ curl -s https://commondatastorage.googleapis.com/chromium-browser-snapshots/AndroidDesktop_x64/LAST_CHANGE
++ REV=1726647
++ tee out/chromium-files.json
++ head -c 3000
++ curl -s 'https://storage.googleapis.com/storage/v1/b/chromium-browser-snapshots/o?prefix=AndroidDesktop_x64/1726647/&fields=items(name,size)'
+{
+  "items": [
+    {
+      "name": "AndroidDesktop_x64/1726647/REVISIONS",
+      "size": "660"
+    },
+    {
+      "name": "AndroidDesktop_x64/1726647/chrome-android-desktop.zip",
+      "size": "504836672"
+    }
+  ]
+}
++ echo
+
+++ grep -o '"name": *"[^"]*\.zip"' out/chromium-files.json
+++ sed 's/.*"\(AndroidDesktop[^"]*\)"/\1/'
+++ grep -iE 'chrome-android|apks|chrome'
+++ head -1
++ ZIP=AndroidDesktop_x64/1726647/chrome-android-desktop.zip
++ echo 'zip: AndroidDesktop_x64/1726647/chrome-android-desktop.zip'
+zip: AndroidDesktop_x64/1726647/chrome-android-desktop.zip
++ '[' -n AndroidDesktop_x64/1726647/chrome-android-desktop.zip ']'
++ curl -s -o /tmp/chromium.zip https://storage.googleapis.com/chromium-browser-snapshots/AndroidDesktop_x64/1726647/chrome-android-desktop.zip
++ unzip -q -o /tmp/chromium.zip -d /tmp/chromium
++ head -20
++ tee out/apks.txt
++ find /tmp/chromium -name '*.apk' -o -name '*.apks'
+/tmp/chromium/chrome-android-desktop/apks/SystemWebViewShell.apk
+/tmp/chromium/chrome-android-desktop/apks/ContentShell.apk
+/tmp/chromium/chrome-android-desktop/apks/SystemWebView.apk
+/tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk
+++ find /tmp/chromium -iname ChromePublic.apk
+++ head -1
++ APK=/tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk
++ '[' -z /tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk ']'
++ '[' -n /tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk ']'
++ adb install -r -g /tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk
++ tee out/install.txt
+Performing Streamed Install
+Success
++ adb shell pm list packages
++ grep -iE chrom
++ tee out/browsers.txt
+package:org.chromium.chrome
+package:com.android.chrome
++ adb shell dumpsys package org.chromium.chrome
++ grep -E versionName
++ tee -a out/browsers.txt
++ head -1
+    versionName=158.0.8125.0
++ adb shell dumpsys package com.android.chrome
++ grep -E versionName
++ head -1
++ tee -a out/browsers.txt
+    versionName=74.0.3729.185
++ python3 tests/android/make-photos.py tests/android/src.jpg /tmp/photos
+photos in /tmp/photos
++ adb shell mkdir -p /sdcard/DCIM/Camera
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_NOGPS_1.jpg /sdcard/DCIM/Camera/DIVE_NOGPS_1.jpg
+/tmp/photos/DIVE_NOGPS_1.jpg: 1 file pushed, 0 skipped. 1806.3 MB/s (435537 bytes in 0.000s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_NOGPS_1.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///sdcard/DCIM/Camera/DIVE_NOGPS_1.jpg flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_GPS_1.jpg /sdcard/DCIM/Camera/DIVE_GPS_1.jpg
+/tmp/photos/DIVE_GPS_1.jpg: 1 file pushed, 0 skipped. 1648.8 MB/s (435663 bytes in 0.000s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_GPS_1.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///sdcard/DCIM/Camera/DIVE_GPS_1.jpg flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_NOGPS_2.jpg /sdcard/DCIM/Camera/DIVE_NOGPS_2.jpg
+/tmp/photos/DIVE_NOGPS_2.jpg: 1 file pushed, 0 skipped. 2136.6 MB/s (435537 bytes in 0.000s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_NOGPS_2.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///sdcard/DCIM/Camera/DIVE_NOGPS_2.jpg flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_GPS_2.jpg /sdcard/DCIM/Camera/DIVE_GPS_2.jpg
+/tmp/photos/DIVE_GPS_2.jpg: 1 file pushed, 0 skipped. 1916.0 MB/s (435663 bytes in 0.000s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_GPS_2.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///sdcard/DCIM/Camera/DIVE_GPS_2.jpg flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ adb shell content query --uri content://media/external/images/media --projection _id:_display_name:date_modified
++ tee out/mediastore.txt
+Row: 0 _id=13, _display_name=DIVE_NOGPS_1.jpg, date_modified=1792951647
+Row: 1 _id=14, _display_name=DIVE_GPS_1.jpg, date_modified=1792951647
+Row: 2 _id=15, _display_name=DIVE_NOGPS_2.jpg, date_modified=1792951647
+Row: 3 _id=16, _display_name=DIVE_GPS_2.jpg, date_modified=1792951647
++ adb reverse tcp:8000 tcp:8000
++ python3 -m http.server 8000
+8000
++ npm i --no-save --silent playwright@1.48.2
++ for PKG in org.chromium.chrome com.android.chrome
++ adb shell pm list packages
++ grep -q org.chromium.chrome
++ PKG=org.chromium.chrome
++ node tests/android/drive.mjs out/org.chromium.chrome tests/android/scenarios.json
+device Android SDK built for x86_64 emulator-5554
