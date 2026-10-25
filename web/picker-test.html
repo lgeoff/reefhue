@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reefhue picker check</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font: 15px system-ui, sans-serif; margin: 0; padding: 16px; background: #141515; color: #ecebe8; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  p { color: #9a9b9e; margin: 0 0 14px; }
+  label, button { display: block; width: 100%; box-sizing: border-box; padding: 14px; margin: 8px 0; border-radius: 8px; border: 0; background: #1565b0; color: #fff; font: 600 15px system-ui, sans-serif; text-align: left; }
+  label small { display: block; font-weight: 400; opacity: .8; margin-top: 2px; }
+  button { background: #27282a; text-align: center; }
+  ol { padding-left: 20px; margin: 14px 0; }
+  li { margin: 6px 0; }
+  .ok { color: #73cf92; } .bad { color: #ff5d4f; }
+  pre { white-space: pre-wrap; font-size: 11px; color: #9a9b9e; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<h1>Picker check</h1>
+<p>Tap each button and pick the same photo from your gallery or file browser, the way you normally would. Then tap “Copy report” and paste it in the chat.</p>
+<label for="a">1 · Read size first <small>like the app did before</small></label>
+<input type="file" id="a" accept="image/*,video/*" hidden>
+<label for="b">2 · Read the bytes immediately</label>
+<input type="file" id="b" accept="image/*,video/*" hidden>
+<label for="c">3 · Copy to private storage <small>the new app behaviour</small></label>
+<input type="file" id="c" accept="image/*,video/*" hidden>
+<label for="d">4 · Images only <small>accept="image/*"</small></label>
+<input type="file" id="d" accept="image/*" hidden>
+<label for="e">5 · Any file <small>no accept: opens the file manager</small></label>
+<input type="file" id="e" hidden>
+<ol id="out"></ol>
+<button type="button" id="copy">Copy report</button>
+<pre id="raw"></pre>
+<script>
+const report = [`UA: ${navigator.userAgent}`];
+const strategies = { a: 'size-first', b: 'read-first', c: 'opfs', d: 'read-first', e: 'read-first' };
+const err = (e) => `${e?.name || 'Error'}: ${(e?.message || String(e)).slice(0, 90)}`;
+async function read(strategy, f) {
+  const t0 = performance.now();
+  try {
+    let n;
+    if (strategy === 'size-first') { void f.size; n = (await f.arrayBuffer()).byteLength; }
+    else if (strategy === 'opfs') {
+      const root = await navigator.storage.getDirectory();
+      const h = await root.getFileHandle('check-' + Date.now(), { create: true });
+      const w = await h.createWritable();
+      await f.stream().pipeTo(w);
+      const copy = await h.getFile();
+      n = copy.size; await copy.slice(0, 16).arrayBuffer(); await root.removeEntry(h.name);
+    } else n = (await f.arrayBuffer()).byteLength;
+    return { ok: true, n, ms: Math.round(performance.now() - t0) };
+  } catch (e) { return { ok: false, e: err(e), ms: Math.round(performance.now() - t0) }; }
+}
+for (const id of Object.keys(strategies)) {
+  const input = document.getElementById(id);
+  input.addEventListener('change', async () => {
+    const files = [...input.files];
+    const runs = files.map((f) => read(strategies[id], f)); // first, before anything else
+    const res = await Promise.all(runs);
+    files.forEach((f, i) => {
+      const r = res[i];
+      const line = `${id.toUpperCase()} ${strategies[id]} · ${f.name} · ${f.type || 'no type'} · ${r.ok ? `OK ${r.n} bytes` : `FAIL ${r.e}`} · ${r.ms} ms · size ${f.size} · modified ${new Date(f.lastModified).toISOString()}`;
+      report.push(line);
+      const li = document.createElement('li');
+      li.innerHTML = `<b class="${r.ok ? 'ok' : 'bad'}">${r.ok ? 'Worked' : 'Failed'}</b> · ${id.toUpperCase()} · ${f.name}${r.ok ? '' : ` · ${r.e}`}`;
+      document.getElementById('out').append(li);
+    });
+    document.getElementById('raw').textContent = report.join('\n');
+    input.value = '';
+  });
+}
+document.getElementById('copy').onclick = async () => {
+  const text = report.join('\n');
+  try { await navigator.clipboard.writeText(text); document.getElementById('copy').textContent = 'Copied'; }
+  catch { const r = document.createRange(); r.selectNodeContents(document.getElementById('raw')); getSelection().removeAllRanges(); getSelection().addRange(r); }
+};
+document.getElementById('raw').textContent = report.join('\n');
+</script>
+</body>
+</html>
