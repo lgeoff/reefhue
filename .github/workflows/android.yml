@@ -7,11 +7,12 @@ permissions:
 jobs:
   emulator:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 80
     strategy:
       fail-fast: false
       matrix:
         api: [29, 34]
+        pkg: [org.chromium.chrome, com.android.chrome]
     steps:
       - uses: actions/checkout@v4
       - name: Enable KVM
@@ -29,12 +30,12 @@ jobs:
           heap-size: 512M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: bash tests/android/run.sh ${{ matrix.api }}
+          script: bash tests/android/run.sh ${{ matrix.api }} ${{ matrix.pkg }}
       - name: Publish results to a branch
         if: always()
         run: |
           mkdir -p out && cp -r out /tmp/results && cd /tmp/results
           git init -q && git checkout -q -b r
           git config user.name ci && git config user.email ci@example.com
-          git add -A && git commit -qm "android ${{ matrix.api }} results ${{ github.sha }}" || true
-          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" r:refs/heads/android-results-${{ matrix.api }}
+          git add -A && git commit -qm "android ${{ matrix.api }} ${{ matrix.pkg }} results ${{ github.sha }}" || true
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" r:refs/heads/android-results-${{ matrix.api }}-${{ matrix.pkg }}

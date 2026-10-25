@@ -1,7 +1,7 @@
 // Drives Chrome on an Android emulator through the real file pickers.
 // node tests/android/drive.mjs <out-dir> <scenarios.json>
 // Each scenario: {name, url, click (CSS selector of the label/button), strategy?, want (file name to pick), done (JS expression, truthy when finished)}
-import { _android as android } from 'playwright';
+import { chromium } from 'playwright';
 import { execFileSync } from 'child_process';
 import { writeFileSync, readFileSync, mkdirSync } from 'fs';
 
@@ -51,7 +51,7 @@ function pickerStep(nodes, want, step) {
   const byName = find((n) => t(n) === want || d(n).includes(want));
   if (byName) { tap(byName, 'wanted file'); return true; }
   // Chrome's own photo picker (Android < 13): pick the first photo tile, then Done
-  const done = find((n) => /^(done|add|select|open)$/i.test(t(n)) && n.clickable === 'true' && id(n) !== '');
+  const done = find((n) => /^(done|add|select|open|allow)( \(\d+\))?$/i.test(t(n)) && (n.clickable === 'true' || /button/i.test(n.class)));
   const tiles = nodes.filter((n) => n.x && /bitmap_view|image_view|icon_thumb|photo_picker|thumbnail/i.test(id(n)) && n.w > 100 && n.h > 100);
   if (tiles.length && step.tiles !== 'done') { tap(tiles[step.tileIndex ?? 0], `photo tile ${step.tileIndex ?? 0} of ${tiles.length}`); step.tiles = 'done'; return true; }
   if (done && step.tiles === 'done') { tap(done, 'confirm'); return true; }
@@ -74,21 +74,43 @@ function pickerStep(nodes, want, step) {
   return false;
 }
 
-const [device] = await android.devices();
+// Start the browser with remote debugging and attach over DevTools.
 const PKG = process.env.PKG || 'com.android.chrome';
-note('device', device.model(), device.serial());
-await device.shell(`am force-stop ${PKG}`);
-const context = await device.launchBrowser({ pkg: PKG });
-const page = await context.newPage();
+note('device', adb('shell', 'getprop', 'ro.product.model').trim(), 'Android', adb('shell', 'getprop', 'ro.build.version.release').trim(), PKG);
+adb('shell', `am force-stop ${PKG}`);
+adb('shell', 'echo "chrome --enable-remote-debugging --disable-fre --no-default-browser-check --no-first-run --disable-features=SigninPromo" > /data/local/tmp/chrome-command-line');
+adb('shell', 'chmod 644 /data/local/tmp/chrome-command-line');
+adb('shell', `am set-debug-app --persistent ${PKG}`);
+adb('shell', `am start -n ${PKG}/com.google.android.apps.chrome.Main -a android.intent.action.VIEW -d about:blank`);
+await sleep(8000);
+// first-run screens, if any
+for (let i = 0; i < 4; i++) {
+  const { nodes } = dump();
+  const b = nodes.find((n) => n.x && /^(accept & continue|accept and continue|no thanks|no, thanks|continue|got it|use without an account|skip)$/i.test((n.text || '').trim()));
+  if (!b) break;
+  tap(b, 'first run'); await sleep(2500);
+}
+const sock = PKG === 'com.android.chrome' ? 'chrome_devtools_remote' : 'chrome_devtools_remote';
+adb('forward', 'tcp:9222', `localabstract:${sock}`);
+let browser;
+for (let i = 0; i < 20 && !browser; i++) {
+  try { browser = await chromium.connectOverCDP('http://127.0.0.1:9222', { timeout: 10000 }); } catch (e) { note('  waiting for devtools', e.message.slice(0, 80)); await sleep(3000); }
+}
+if (!browser) throw new Error('no devtools connection');
+note('browser', browser.version());
+const context = browser.contexts()[0];
+const page = context.pages()[0] || await context.newPage();
 page.on('console', (m) => note('  [page]', m.text().slice(0, 300)));
 const results = {};
 for (const sc of scenarios) {
   note(`\n== ${sc.name}`);
   try {
-    if (page.url() !== sc.url) { await page.goto(sc.url, { waitUntil: 'load', timeout: 60000 }); await sleep(sc.settle ?? 1500); }
+    // a fresh page every time: the same file picked twice on one input fires no change event
+    await page.goto(sc.url + (sc.url.includes('?') ? '&' : '?') + 'r=' + Date.now(), { waitUntil: 'load', timeout: 60000 });
+    await sleep(sc.settle ?? 1500);
     if (sc.setup) await page.evaluate(sc.setup);
     await page.click(sc.click, { timeout: 15000 });
-    const step = { app: sc.app, tileIndex: sc.tileIndex };
+    const step = { app: sc.app, tileIndex: sc.tileIndex, idle: 0 };
     let finished = false;
     for (let i = 0; i < 14 && !finished; i++) {
       await sleep(1800);
@@ -99,7 +121,7 @@ for (const sc of scenarios) {
       note(`  screen ${i}: ${nodes[0]?.package || '?'} | ${visible.join(' | ')}`);
       writeFileSync(`${out}/${sc.name}-ui-${i}.xml`, xml || '');
       screenshot(`${sc.name}-${i}`);
-      if (!pickerStep(nodes, sc.want, step)) { note('  (nothing to tap)'); if (i > 2) break; }
+      if (!pickerStep(nodes, sc.want, step)) { note('  (nothing to tap)'); if (++step.idle > 2) break; }
     }
     await sleep(2500);
     results[sc.name] = await page.evaluate(sc.result).catch((e) => `result error ${e.message}`);
@@ -113,5 +135,4 @@ for (const sc of scenarios) {
 }
 writeFileSync(`${out}/results.json`, JSON.stringify(results, null, 2));
 writeFileSync(`${out}/driver.log`, log.join('\n'));
-await context.close();
-await device.close();
+await browser.close().catch(() => {});

@@ -2,10 +2,14 @@
 # Inside the emulator runner: install the latest Chromium, put test photos in
 # the gallery, serve the repo to the device and drive the real file pickers.
 API=$1
+ONLY=$2
 mkdir -p out
 exec > >(tee out/run.txt) 2>&1
 set -x
 adb shell getprop ro.build.version.release
+adb root || true
+sleep 3
+adb wait-for-device
 adb shell settings put global package_verifier_enable 0 || true
 adb shell settings put global hide_error_dialogs 1 || true
 adb shell settings put secure anr_show_background 0 || true
@@ -42,7 +46,9 @@ adb shell content query --uri content://media/external/images/media --projection
 python3 -m http.server 8000 >/dev/null 2>&1 &
 adb reverse tcp:8000 tcp:8000
 npm i --no-save --silent playwright@1.48.2 >/dev/null 2>&1
+npx playwright --version
 for PKG in org.chromium.chrome com.android.chrome; do
+  [ -n "$ONLY" ] && [ "$PKG" != "$ONLY" ] && continue
   adb shell pm list packages | grep -q "$PKG" || continue
   PKG=$PKG node tests/android/drive.mjs out/$PKG tests/android/scenarios.json || true
 done
