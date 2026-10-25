@@ -18,10 +18,6 @@ jobs:
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
-      - name: Chromium snapshot folders
-        run: |
-          mkdir -p out; curl -s "https://commondatastorage.googleapis.com/chromium-browser-snapshots/?prefix=Android&delimiter=/" | grep -o "<Prefix>[^<]*</Prefix>" | head -20 | tee out/snapshots.txt
-          for d in Android Android_Arm64 Android_x64 Android_x86; do echo "$d: $(curl -s https://commondatastorage.googleapis.com/chromium-browser-snapshots/$d/LAST_CHANGE)"; done | tee -a out/snapshots.txt
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
@@ -30,7 +26,7 @@ jobs:
           profile: pixel_4
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: bash tests/android/explore.sh ${{ matrix.api }}
+          script: bash tests/android/run.sh ${{ matrix.api }}
       - name: Publish results to a branch
         if: always()
         run: |
