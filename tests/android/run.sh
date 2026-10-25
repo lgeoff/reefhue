@@ -7,6 +7,11 @@ exec > >(tee out/run.txt) 2>&1
 set -x
 adb shell getprop ro.build.version.release
 adb shell settings put global package_verifier_enable 0 || true
+adb shell settings put global hide_error_dialogs 1 || true
+adb shell settings put secure anr_show_background 0 || true
+# let the freshly booted system settle, then clear any dialog
+sleep 45
+adb shell input keyevent KEYCODE_HOME
 
 # latest Chromium x86_64 Android build
 REV=$(curl -s https://commondatastorage.googleapis.com/chromium-browser-snapshots/AndroidDesktop_x64/LAST_CHANGE)

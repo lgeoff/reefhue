@@ -41,6 +41,9 @@ function screenshot(name) {
 function pickerStep(nodes, want, step) {
   const t = (n) => (n.text || '').trim(), d = (n) => n['content-desc'] || '', id = (n) => n['resource-id'] || '';
   const find = (pred) => nodes.find((n) => n.x && pred(n));
+  // "isn't responding" dialogs from a busy emulator
+  const anr = find((n) => /aerr_wait$/.test(id(n))) || find((n) => /aerr_close$/.test(id(n)));
+  if (anr) { tap(anr, 'dismiss ANR'); return true; }
   // permission prompts
   const allow = find((n) => /^(allow|allow all|while using the app|allow access to all|allow all the time)$/i.test(t(n)) && n.clickable === 'true');
   if (allow) { tap(allow, 'permission'); return true; }
