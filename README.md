@@ -12,7 +12,7 @@ Restore the colours of underwater photos and videos in the browser, one file at 
 ## Using it
 
 - **Help** in the header starts a guided tour of every feature (offered once on the first visit). On phones the preview stays pinned at the top while you scroll the settings.
-- **Open** JPEG/PNG/WebP photos or MP4/MOV/WebM videos (button or drag and drop). One file opens it; several files make a batch. The app starts with a generated demo reef; *Demo clip* renders a short test video in the browser.
+- **Open** photos: JPEG, PNG, WebP, AVIF, GIF, BMP, HEIC/HEIF, TIFF, and RAW files (ARW, CR2, CR3, NEF, DNG, ORF, RW2, RAF, PEF, SRW… using the JPEG preview the camera stores inside, so its size depends on the camera). Videos: MP4, MOV, M4V, 3GP, MKV, WebM, and MTS/M2TS/TS (AVCHD; repackaged to MP4 in the browser, AAC sound kept, AC-3 sound dropped because browsers can't decode it). HEIC needs a device that decodes HEVC (most phones and recent computers). AVI isn't supported. Button or drag and drop. One file opens it; several files make a batch. The app starts with a generated demo reef; *Demo clip* renders a short test video in the browser.
 - **Presets:** Auto, Shallow (0–5 m), Mid (5–15 m), Deep (15 m +), Green water, Natural, Vivid, plus three **Looks** (Teal matte, Moody blue, Tropical light). Every slider can be fine-tuned; double-click a slider to reset it to the preset value.
 - **Water controls:** saturation, hue (turquoise ↔ deep blue) and brightness of blue/cyan water only, like Lightroom's HSL "Aqua/Blue" adjustments.
 - **Compare:** Split (drag the divider), After, Before, or hold `B`.
@@ -100,6 +100,7 @@ python3 tools/bundle.py                    # writes dist/reefhue.html (+ artifac
 
 ## Tests
 
+- `tests/make-formats.sh <dir> <photo.jpg>` then `node tests/formats.mjs <url> <out> <files>` opens and exports every supported format (transport streams, MKV, 3GP, RAW layouts, TIFF variants, a tiled rotated HEIC).
 - `node tests/android-sim.mjs <url> <photo.jpg>` reproduces the Android photo-picker failure (the photo changes between picking and reading, so Chrome throws NotReadableError) in Pixel 7 emulation, and checks the pick-again recovery.
 
 ```sh

@@ -8,6 +8,9 @@
 // already downscaled, and decoding falls back to <img> when
 // createImageBitmap refuses a file. Failures carry a readable diagnosis.
 
+import { RAW_EXT, rawPreview, tiffToJpeg } from './formats.js';
+import { heicToJpeg } from './heic.js';
+
 const ORIENT_SWAPS = new Set([5, 6, 7, 8]);
 
 /** Format, pixel size and EXIF orientation from the first bytes of a photo. */
@@ -32,6 +35,16 @@ export function sniffImage(u8) {
       }
       o += 2 + len;
     }
+  } else if ((ascii(0, 4) === 'II*\0' || ascii(0, 4) === 'MM\0*')) {
+    out.format = 'TIFF';
+  } else if (ascii(0, 4) === 'IIRO' || ascii(0, 4) === 'IIRS' || ascii(0, 4) === 'MMOR') {
+    out.format = 'ORF';
+  } else if (ascii(0, 4) === 'IIU\0') {
+    out.format = 'RW2';
+  } else if (ascii(0, 15) === 'FUJIFILMCCD-RAW') {
+    out.format = 'RAF';
+  } else if (ascii(4, 4) === 'ftyp' && ascii(8, 4) === 'crx ') {
+    out.format = 'CR3';
   } else if (ascii(1, 3) === 'PNG') {
     out.format = 'PNG'; out.w = dv.getUint32(16); out.h = dv.getUint32(20);
   } else if (ascii(0, 4) === 'RIFF' && ascii(8, 4) === 'WEBP') {
@@ -104,10 +117,32 @@ export async function loadPhotoFile(file) {
     err.details = `${file.name} · ${fmtSize(file.size)} · ${file.type || 'no type'} · modified ${new Date(file.lastModified).toISOString()} · ${attempts.length} read attempts: ${attempts.join(' | ')}`;
     throw err;
   }
-  const u8 = new Uint8Array(buf);
-  const info = { ...sniffImage(u8.subarray(0, Math.min(u8.length, 512 * 1024))), size: u8.length, type: file.type };
+  let u8 = new Uint8Array(buf);
+  const size = u8.length;
+  let note = '';
+  // formats browsers can't decode become a JPEG here
+  const conv = await convertPhoto(u8, file.name);
+  if (conv) { u8 = conv.bytes; note = conv.note; }
+  const info = { ...sniffImage(u8.subarray(0, Math.min(u8.length, 512 * 1024))), size, type: file.type, note };
   const type = { JPEG: 'image/jpeg', PNG: 'image/png', WebP: 'image/webp', GIF: 'image/gif', HEIC: 'image/heic', AVIF: 'image/avif' }[info.format] || file.type || 'application/octet-stream';
-  return { file: new File([buf], file.name, { type, lastModified: file.lastModified }), info };
+  return { file: new File([u8], file.name, { type, lastModified: file.lastModified }), info };
+}
+
+/** RAW, TIFF (and HEIC) to JPEG; null for formats the browser decodes itself. */
+async function convertPhoto(u8, name) {
+  const head = sniffImage(u8.subarray(0, Math.min(u8.length, 64 * 1024)));
+  const raw = RAW_EXT.test(name) || /^(CR3|RAF|ORF|RW2)$/.test(head.format);
+  if (raw) return rawPreview(u8, name);
+  if (head.format === 'TIFF') {
+    try { return await tiffToJpeg(u8, name); } catch (e) {
+      // an unknown RAW flavour is TIFF-shaped too: fall back to its preview
+      // (never for real .tif files, whose JPEG strips are not previews)
+      if (/\.tiff?$/i.test(name)) throw e;
+      try { return rawPreview(u8, name); } catch { throw e; }
+    }
+  }
+  if (head.format === 'HEIC') return heicToJpeg(u8, name);
+  return null;
 }
 
 export function describe(info, name) {

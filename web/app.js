@@ -9,6 +9,8 @@ import { makeZip } from './zip.js';
 import { loadPhotoFile, decodePhoto, describe } from './image.js';
 import { demoPhoto, demoClip } from './demo.js';
 import { Tour, tourSeen, markTourSeen } from './tour.js';
+import { transmuxTs } from './ts.js';
+import { RAW_EXT } from './formats.js';
 
 const $ = (id) => document.getElementById(id);
 const PREVIEW_MAX = 1600; // long edge of the live preview buffer
@@ -86,8 +88,12 @@ const fmtDur = (t) => `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padSta
 const fmtMB = (b) => (b >= 1e9 ? `${(b / 1e9).toFixed(2)} GB` : `${(b / 1e6).toFixed(b >= 1e7 ? 0 : 1)} MB`);
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const presetValues = (k) => Object.fromEntries(KEYS.map((key) => [key, PRESETS[k][key] ?? DEFAULTS[key]]));
-const isVideoFile = (f) => f.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|mkv)$/i.test(f.name);
-const isImageFile = (f) => f.type.startsWith('image/') || /\.(jpe?g|png|webp|avif|gif|bmp|heic|heif)$/i.test(f.name) || (!f.type && !isVideoFile(f));
+const VIDEO_EXT = /\.(mp4|mov|m4v|webm|mkv|mts|m2ts|ts|3gp|3g2|avi)$/i;
+const isTsFile = (f) => /\.(mts|m2ts|ts)$/i.test(f.name) || /mp2t|mpeg-tts|vnd\.mts/i.test(f.type);
+const isAviFile = (f) => /\.avi$/i.test(f.name) || /x-msvideo|\/avi$/i.test(f.type);
+// extension first: Windows reports .mts as "model/vnd.mts", .ts as TypeScript
+const isVideoFile = (f) => VIDEO_EXT.test(f.name) || f.type.startsWith('video/') || isTsFile(f);
+const isImageFile = (f) => !isVideoFile(f) && (f.type.startsWith('image/') || /\.(jpe?g|jfif|png|webp|avif|gif|bmp|heic|heif|hif|tiff?)$/i.test(f.name) || RAW_EXT.test(f.name) || !f.type);
 const baseName = (n) => n.replace(/\.[^.]+$/, '') || 'reefhue';
 
 // ----------------------------------------------------------- item model
@@ -457,7 +463,14 @@ function addFiles(list) {
     preset: 'auto', user: presetValues('auto'), locked: null,
     status: 'ready', progress: 0, stateText: 'Ready', result: null,
   }));
-  for (const item of added) item.ready = item.kind === 'image' ? readPhoto(item) : Promise.resolve();
+  for (const item of added) {
+    if (item.kind === 'image') item.ready = readPhoto(item);
+    else if (isTsFile(item.file)) item.ready = prepareTs(item);
+    else if (isAviFile(item.file)) {
+      Object.assign(item, { status: 'error', unplayable: true, stateText: 'AVI can’t be played in a browser. Convert it to MP4 first (for example with HandBrake).' });
+      item.ready = Promise.resolve();
+    } else item.ready = Promise.resolve();
+  }
   for (const item of added) {
     // picked again after Android refused the first copy: take the failed entry's place
     const k = st.items.findIndex((o) => o.repick && o.name === item.name);
@@ -492,6 +505,32 @@ function bindPicker(input) {
   });
 }
 
+// Transport streams (.MTS/.M2TS/.TS) are repackaged as MP4 first, one at a time.
+let tsChain = Promise.resolve();
+function prepareTs(item) {
+  item.preparing = 0;
+  item.stateText = 'Preparing…';
+  const run = tsChain.catch(() => {}).then(async () => {
+    try {
+      const r = await transmuxTs(item.file, { onProgress: (f) => { item.preparing = f; if (st.cur === item) busy(`Preparing ${item.name}…`, f); } });
+      console.info('repackaged', item.name, `${r.width}×${r.height}`, `${r.frames} frames`, r.audio ? `sound ${r.audio}` : 'no sound', r.droppedAudio ? `dropped ${r.droppedAudio}` : '');
+      item.file = r.file;
+      item.note = r.droppedAudio ? `sound not kept (${r.droppedAudio})` : '';
+      item.stateText = 'Ready';
+    } catch (e) {
+      Object.assign(item, { status: 'error', unplayable: true, stateText: e.message });
+      e.prep = true;
+      throw e;
+    } finally {
+      item.preparing = null;
+      if (st.cur === item) busy(null);
+      updateItemEl(item);
+    }
+  });
+  tsChain = run;
+  return run;
+}
+
 // Photos are read into memory once, one at a time: files picked through
 // Android's file browser can fail when the same file is read twice at once.
 const idleChain = Promise.resolve();
@@ -510,6 +549,7 @@ function readPhoto(item) {
       item.file = file;
       item.info = info;
       item.size = info.size;
+      item.note = info.note || '';
       if (info.w) { item.w = info.w; item.h = info.h; }
     } catch (e) {
       item.status = 'error';
@@ -571,6 +611,8 @@ async function probe(item) {
       return;
     }
   } else {
+    try { await item.ready; } catch { return; }
+    if (item.unplayable) return;
     let codec = null;
     try {
       const d = await openMp4(item.file);
@@ -727,7 +769,7 @@ async function selectItem(item) {
       item.status = 'error'; item.unplayable = true; item.stateText = pe.message; item.errorDetails = pe.details;
       updateItemEl(item);
       showError(pe.message, pe.details);
-    } else showError(`${err.message || err}. This browser may not decode that video format.`);
+    } else showError(err.prep || item.unplayable ? (item.stateText || err.message) : `${err.message || err}. This browser may not decode that video format.`);
   }
 }
 
@@ -735,7 +777,7 @@ async function selectItem(item) {
 function setFileLabel() {
   const item = st.cur;
   $('fileName').textContent = item.name;
-  const extra = st.kind === 'video' ? ` · ${fmtTime(v.duration)} · ${(+st.fps).toFixed(st.fps % 1 ? 2 : 0)} fps` : '';
+  const extra = (st.kind === 'video' ? ` · ${fmtTime(v.duration)} · ${(+st.fps).toFixed(st.fps % 1 ? 2 : 0)} fps` : '') + (item.note ? ` · ${item.note}` : '');
   const w = st.kind === 'image' && item.w ? item.w : st.srcW, h = st.kind === 'image' && item.h ? item.h : st.srcH;
   $('fileMeta').textContent = `${w}×${h}${extra}`;
   syncDownload();
@@ -788,6 +830,9 @@ async function estimateFps() {
 
 async function loadVideo(item) {
   stopVideo();
+  if (item.preparing != null) busy(`Preparing ${item.name}…`, item.preparing);
+  await item.ready;
+  if (st.cur !== item) return;
   v.muted = true;
   v.src = URL.createObjectURL(item.file);
   await Promise.race([once(v, 'loadeddata'), once(v, 'error').then(() => { throw new Error('unsupported video'); })]);
@@ -1181,6 +1226,11 @@ function bindDebug() {
 
 // ------------------------------------------------------------- wiring
 function bindInputs() {
+  // Android keeps MIME types only (that's what lets Chrome use its photo
+  // picker); desktop file dialogs also need the extensions they don't map.
+  if (!/Android/i.test(navigator.userAgent)) {
+    $('fileInput').accept = 'image/*,video/*,.heic,.heif,.tif,.tiff,.arw,.srf,.sr2,.cr2,.cr3,.nef,.nrw,.dng,.orf,.rw2,.raf,.pef,.srw,.rwl,.3fr,.mts,.m2ts,.ts,.mkv,.3gp';
+  }
   bindPicker($('fileInput'));
   bindPicker($('fileInputAny'));
   let depth = 0;

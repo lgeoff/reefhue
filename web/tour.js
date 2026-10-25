@@ -13,7 +13,7 @@ const STEPS = [
   {
     target: '#addBtn',
     title: 'Add photos or videos',
-    body: () => `Pick JPEG, PNG or WebP photos and MP4, MOV or WebM videos${touch() ? '' : ', or drag them anywhere onto the page'}. Pick several at once to make a batch.`,
+    body: () => `Photos: JPEG, HEIC, RAW (using the camera’s preview), TIFF, PNG, WebP. Videos: MP4, MOV, MTS/AVCHD, MKV, WebM${touch() ? '' : '. Or drag them anywhere onto the page'}. Pick several at once to make a batch.`,
   },
   {
     target: '.demo-links',
