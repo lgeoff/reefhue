@@ -1,0 +1,175 @@
+{
+  "browse-Files-gps-sizefirst": [
+    {
+      "input": "mixed",
+      "strategy": "size-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:27:29.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 228
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "size-first",
+      "count": 1
+    }
+  ],
+  "browse-Files-gps-readfirst": [
+    {
+      "input": "mixed",
+      "strategy": "read-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:27:29.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 313
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "read-first",
+      "count": 1
+    }
+  ],
+  "browse-Files-nogps-sizefirst": [
+    {
+      "input": "mixed",
+      "strategy": "size-first",
+      "name": "DIVE_NOGPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:27:29.000Z",
+      "ok": true,
+      "bytes": 435537,
+      "size": 435537,
+      "ms": 300
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "size-first",
+      "count": 1
+    }
+  ],
+  "browse-Files-gps-opfs": [
+    {
+      "input": "mixed",
+      "strategy": "opfs",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:27:29.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 390
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "opfs",
+      "count": 1
+    }
+  ],
+  "browse-Files-app-main": {
+    "name": "DIVE_GPS_2.jpg",
+    "status": "ready",
+    "state": "Ready",
+    "info": "2000x1333"
+  },
+  "browse-Files-app-fixed": {
+    "name": "DIVE_GPS_2.jpg",
+    "status": "ready",
+    "state": "Ready",
+    "info": "2000x1333"
+  },
+  "browse-Photos-gps-sizefirst": [
+    {
+      "input": "mixed",
+      "strategy": "size-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:27:29.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 290
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "size-first",
+      "count": 1
+    }
+  ],
+  "browse-Photos-gps-readfirst": [
+    {
+      "input": "mixed",
+      "strategy": "read-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:27:29.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 501
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "read-first",
+      "count": 1
+    }
+  ],
+  "browse-Photos-nogps-sizefirst": [
+    {
+      "input": "mixed",
+      "strategy": "size-first",
+      "name": "DIVE_NOGPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:27:29.000Z",
+      "ok": true,
+      "bytes": 435537,
+      "size": 435537,
+      "ms": 581
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "size-first",
+      "count": 1
+    }
+  ],
+  "browse-Photos-gps-opfs": [
+    {
+      "input": "mixed",
+      "strategy": "opfs",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T20:27:29.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 673
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "opfs",
+      "count": 1
+    }
+  ],
+  "browse-Photos-app-main": {
+    "name": "DIVE_GPS_2.jpg",
+    "status": "ready",
+    "state": "Ready",
+    "info": "2000x1333"
+  },
+  "browse-Photos-app-fixed": {
+    "error": "page.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('#addBtn')\n"
+  }
+}

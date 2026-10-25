@@ -1,0 +1,228 @@
++ adb shell getprop ro.build.version.release
+10
++ adb root
+restarting adbd as root
++ sleep 3
++ adb wait-for-device
++ adb shell settings put global package_verifier_enable 0
++ adb shell settings put global hide_error_dialogs 1
++ adb shell settings put secure anr_show_background 0
++ sleep 45
++ adb shell input keyevent KEYCODE_HOME
+++ curl -s https://commondatastorage.googleapis.com/chromium-browser-snapshots/AndroidDesktop_x64/LAST_CHANGE
++ REV=1726651
++ curl -s 'https://storage.googleapis.com/storage/v1/b/chromium-browser-snapshots/o?prefix=AndroidDesktop_x64/1726651/&fields=items(name,size)'
++ tee out/chromium-files.json
++ head -c 3000
+{
+  "items": [
+    {
+      "name": "AndroidDesktop_x64/1726651/REVISIONS",
+      "size": "660"
+    },
+    {
+      "name": "AndroidDesktop_x64/1726651/chrome-android-desktop.zip",
+      "size": "504839028"
+    }
+  ]
+}
++ echo
+
+++ grep -o '"name": *"[^"]*\.zip"' out/chromium-files.json
+++ sed 's/.*"\(AndroidDesktop[^"]*\)"/\1/'
+++ grep -iE 'chrome-android|apks|chrome'
+++ head -1
++ ZIP=AndroidDesktop_x64/1726651/chrome-android-desktop.zip
++ echo 'zip: AndroidDesktop_x64/1726651/chrome-android-desktop.zip'
+zip: AndroidDesktop_x64/1726651/chrome-android-desktop.zip
++ '[' -n AndroidDesktop_x64/1726651/chrome-android-desktop.zip ']'
++ curl -s -o /tmp/chromium.zip https://storage.googleapis.com/chromium-browser-snapshots/AndroidDesktop_x64/1726651/chrome-android-desktop.zip
++ unzip -q -o /tmp/chromium.zip -d /tmp/chromium
++ find /tmp/chromium -name '*.apk' -o -name '*.apks'
++ head -20
++ tee out/apks.txt
+/tmp/chromium/chrome-android-desktop/apks/SystemWebViewShell.apk
+/tmp/chromium/chrome-android-desktop/apks/ContentShell.apk
+/tmp/chromium/chrome-android-desktop/apks/SystemWebView.apk
+/tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk
+++ find /tmp/chromium -iname ChromePublic.apk
+++ head -1
++ APK=/tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk
++ '[' -z /tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk ']'
++ '[' -n /tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk ']'
++ adb install -r -g /tmp/chromium/chrome-android-desktop/apks/ChromePublic.apk
++ tee out/install.txt
+Performing Streamed Install
+Success
++ tee out/browsers.txt
++ adb shell pm list packages
++ grep -iE chrom
+package:org.chromium.chrome
+package:com.android.chrome
++ adb shell dumpsys package org.chromium.chrome
++ head -1
++ grep -E versionName
++ tee -a out/browsers.txt
+    versionName=158.0.8125.0
++ adb shell dumpsys package com.android.chrome
++ tee -a out/browsers.txt
++ grep -E versionName
++ head -1
+    versionName=74.0.3729.185
++ python3 tests/android/make-photos.py tests/android/src.jpg /tmp/photos
+photos in /tmp/photos
++ adb shell mkdir -p /sdcard/DCIM/Camera
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_NOGPS_1.jpg /sdcard/DCIM/Camera/DIVE_NOGPS_1.jpg
+/tmp/photos/DIVE_NOGPS_1.jpg: 1 file pushed, 0 skipped. 2017.1 MB/s (435537 bytes in 0.000s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_NOGPS_1.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///sdcard/DCIM/Camera/DIVE_NOGPS_1.jpg flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_GPS_1.jpg /sdcard/DCIM/Camera/DIVE_GPS_1.jpg
+/tmp/photos/DIVE_GPS_1.jpg: 1 file pushed, 0 skipped. 1621.5 MB/s (435663 bytes in 0.000s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_GPS_1.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///sdcard/DCIM/Camera/DIVE_GPS_1.jpg flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_NOGPS_2.jpg /sdcard/DCIM/Camera/DIVE_NOGPS_2.jpg
+/tmp/photos/DIVE_NOGPS_2.jpg: 1 file pushed, 0 skipped. 1571.3 MB/s (435537 bytes in 0.000s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_NOGPS_2.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///sdcard/DCIM/Camera/DIVE_NOGPS_2.jpg flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2
++ adb push /tmp/photos/DIVE_GPS_2.jpg /sdcard/DCIM/Camera/DIVE_GPS_2.jpg
+/tmp/photos/DIVE_GPS_2.jpg: 1 file pushed, 0 skipped. 1745.1 MB/s (435663 bytes in 0.000s)
++ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/Camera/DIVE_GPS_2.jpg
+Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///sdcard/DCIM/Camera/DIVE_GPS_2.jpg flg=0x400000 }
+Broadcast completed: result=0
++ sleep 1
++ adb shell content query --uri content://media/external/images/media --projection _id:_display_name:date_modified
++ tee out/mediastore.txt
+Row: 0 _id=13, _display_name=DIVE_NOGPS_1.jpg, date_modified=1792960049
+Row: 1 _id=14, _display_name=DIVE_GPS_1.jpg, date_modified=1792960049
+Row: 2 _id=15, _display_name=DIVE_NOGPS_2.jpg, date_modified=1792960049
+Row: 3 _id=16, _display_name=DIVE_GPS_2.jpg, date_modified=1792960049
++ git fetch -q origin main
++ mkdir -p web-main
++ git archive origin/main web
++ tar -x --strip-components=1 -C web-main
++ adb reverse tcp:8000 tcp:8000
++ python3 -m http.server 8000
+8000
++ npm i --no-save --silent playwright@1.48.2
++ npx playwright --version
+Version 1.48.2
++ for PKG in org.chromium.chrome com.android.chrome
++ '[' -n org.chromium.chrome ']'
++ '[' org.chromium.chrome '!=' org.chromium.chrome ']'
++ grep -q org.chromium.chrome
++ adb shell pm list packages
++ PKG=org.chromium.chrome
++ node tests/android/drive.mjs out/org.chromium.chrome tests/android/scenarios.json
+device Android SDK built for x86_64 Android 10 org.chromium.chrome
+browser 158.0.8125.0
+
+== browse-Files-gps-sizefirst
+  [page] Failed to load resource: the server responded with a status of 404 (File not found)
+  screen 0: org.chromium.chrome | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 16 Jan 21, 1970 6:02:40 PM | 15 Jan 21, 1970 6:02:40 PM | 14 Jan 21, 1970 6:02:40 PM | 13 Jan 21, 1970 6:02:40 PM
+  tap "Browse" (browse) at 540,483
+  screen 1: com.android.documentsui | Show roots | Recent | Search <option_menu_search> | More options | Images | Videos | BROWSE FILES IN OTHER APPS | Drive <title> | Photos <title> | RECENT FILES ON PHONE <header_title> | List view <sub_menu_list> | DIVE_NOGPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_NOGPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date>
+  tap "DIVE_GPS_2.jpg" (wanted file) at 830,2051
+  RESULT [{"input":"mixed","strategy":"size-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:27:29.000Z","ok":true,"bytes":435663,"size":435663,"ms":228},{"done":true,"input":"mixed","strategy":"size-first","count":1}]
+
+== browse-Files-gps-readfirst
+  screen 0: org.chromium.chrome | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 16 Jan 21, 1970 6:02:40 PM | 15 Jan 21, 1970 6:02:40 PM | 14 Jan 21, 1970 6:02:40 PM | 13 Jan 21, 1970 6:02:40 PM
+  tap "Browse" (browse) at 540,483
+  screen 1: com.android.documentsui | Show roots | Recent | Search <option_menu_search> | More options | Images | Videos | BROWSE FILES IN OTHER APPS | Drive <title> | Photos <title> | RECENT FILES ON PHONE <header_title> | List view <sub_menu_list> | DIVE_NOGPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_NOGPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date>
+  tap "DIVE_GPS_2.jpg" (wanted file) at 830,2051
+  RESULT [{"input":"mixed","strategy":"read-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:27:29.000Z","ok":true,"bytes":435663,"size":435663,"ms":313},{"done":true,"input":"mixed","strategy":"read-first","count":1}]
+
+== browse-Files-nogps-sizefirst
+  screen 0: org.chromium.chrome | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 16 Jan 21, 1970 6:02:40 PM | 15 Jan 21, 1970 6:02:40 PM | 14 Jan 21, 1970 6:02:40 PM | 13 Jan 21, 1970 6:02:40 PM
+  tap "Browse" (browse) at 540,483
+  screen 1: com.android.documentsui | Show roots | Recent | Search <option_menu_search> | More options | Images | Videos | BROWSE FILES IN OTHER APPS | Drive <title> | Photos <title> | RECENT FILES ON PHONE <header_title> | List view <sub_menu_list> | DIVE_NOGPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_NOGPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date>
+  tap "DIVE_NOGPS_2.jpg" (wanted file) at 350,2051
+  RESULT [{"input":"mixed","strategy":"size-first","name":"DIVE_NOGPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:27:29.000Z","ok":true,"bytes":435537,"size":435537,"ms":300},{"done":true,"input":"mixed","strategy":"size-first","count":1}]
+
+== browse-Files-gps-opfs
+  screen 0: org.chromium.chrome | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 16 Jan 21, 1970 6:02:40 PM | 15 Jan 21, 1970 6:02:40 PM | 14 Jan 21, 1970 6:02:40 PM | 13 Jan 21, 1970 6:02:40 PM
+  tap "Browse" (browse) at 540,483
+  screen 1: com.android.documentsui | Show roots | Recent | Search <option_menu_search> | More options | Images | Videos | BROWSE FILES IN OTHER APPS | Drive <title> | Photos <title> | RECENT FILES ON PHONE <header_title> | List view <sub_menu_list> | DIVE_NOGPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_NOGPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date>
+  tap "DIVE_GPS_2.jpg" (wanted file) at 830,2051
+  RESULT [{"input":"mixed","strategy":"opfs","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:27:29.000Z","ok":true,"bytes":435663,"size":435663,"ms":390},{"done":true,"input":"mixed","strategy":"opfs","count":1}]
+
+== browse-Files-app-main
+  [page] picked demo-reef-9m.jpg 10808 bytes type "image/jpeg"
+  [page] read demo-reef-9m.jpg · JPEG 1600×1067 · 0.0 MB · type "image/jpeg"
+  screen 0: org.chromium.chrome | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 16 Jan 21, 1970 6:02:40 PM | 15 Jan 21, 1970 6:02:40 PM | 14 Jan 21, 1970 6:02:40 PM | 13 Jan 21, 1970 6:02:40 PM
+  tap "Browse" (browse) at 540,483
+  screen 1: com.android.documentsui | Show roots | Recent | Search <option_menu_search> | More options | Images | Videos | BROWSE FILES IN OTHER APPS | Drive <title> | Photos <title> | RECENT FILES ON PHONE <header_title> | List view <sub_menu_list> | DIVE_NOGPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_NOGPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date>
+  tap "DIVE_GPS_2.jpg" (wanted file) at 830,2051
+  [page] picked DIVE_GPS_2.jpg 435663 bytes type "image/jpeg"
+  [page] read DIVE_GPS_2.jpg · JPEG 2000×1333 · 0.4 MB · type "image/jpeg"
+  RESULT {"name":"DIVE_GPS_2.jpg","status":"ready","state":"Ready","info":"2000x1333"}
+
+== browse-Files-app-fixed
+  [page] picked demo-reef-9m.jpg type "image/jpeg"
+  [page] read demo-reef-9m.jpg · JPEG 1600×1067 · 0.0 MB · type "image/jpeg"
+  screen 0: org.chromium.chrome | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 16 Jan 21, 1970 6:02:40 PM | 15 Jan 21, 1970 6:02:40 PM | 14 Jan 21, 1970 6:02:40 PM | 13 Jan 21, 1970 6:02:40 PM
+  tap "Browse" (browse) at 540,483
+  screen 1: com.android.documentsui | Show roots | Recent | Search <option_menu_search> | More options | Images | Videos | BROWSE FILES IN OTHER APPS | Drive <title> | Photos <title> | RECENT FILES ON PHONE <header_title> | List view <sub_menu_list> | DIVE_NOGPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_NOGPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date>
+  tap "DIVE_GPS_2.jpg" (wanted file) at 830,2051
+  [page] picked DIVE_GPS_2.jpg type "image/jpeg"
+  [page] read DIVE_GPS_2.jpg · JPEG 2000×1333 · 0.4 MB · type "image/jpeg"
+  RESULT {"name":"DIVE_GPS_2.jpg","status":"ready","state":"Ready","info":"2000x1333"}
+
+== browse-Photos-gps-sizefirst
+  screen 0: org.chromium.chrome | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 16 Jan 21, 1970 6:02:40 PM | 15 Jan 21, 1970 6:02:40 PM | 14 Jan 21, 1970 6:02:40 PM | 13 Jan 21, 1970 6:02:40 PM
+  tap "Browse" (browse) at 540,483
+  screen 1: com.android.documentsui | Show roots | Recent | Search <option_menu_search> | More options | Images | Videos | BROWSE FILES IN OTHER APPS | Drive <title> | Photos <title> | RECENT FILES ON PHONE <header_title> | List view <sub_menu_list> | DIVE_NOGPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_NOGPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date>
+  tap "DIVE_GPS_2.jpg" (wanted file) at 830,2051
+  RESULT [{"input":"mixed","strategy":"size-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:27:29.000Z","ok":true,"bytes":435663,"size":435663,"ms":290},{"done":true,"input":"mixed","strategy":"size-first","count":1}]
+
+== browse-Photos-gps-readfirst
+  screen 0: org.chromium.chrome | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 16 Jan 21, 1970 6:02:40 PM | 15 Jan 21, 1970 6:02:40 PM | 14 Jan 21, 1970 6:02:40 PM | 13 Jan 21, 1970 6:02:40 PM
+  tap "Browse" (browse) at 540,483
+  screen 1: com.android.documentsui | Show roots | Recent | Search <option_menu_search> | More options | Images | Videos | BROWSE FILES IN OTHER APPS | Drive <title> | Photos <title> | RECENT FILES ON PHONE <header_title> | List view <sub_menu_list> | DIVE_NOGPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_NOGPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date>
+  tap "DIVE_GPS_2.jpg" (wanted file) at 830,2051
+  RESULT [{"input":"mixed","strategy":"read-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:27:29.000Z","ok":true,"bytes":435663,"size":435663,"ms":501},{"done":true,"input":"mixed","strategy":"read-first","count":1}]
+
+== browse-Photos-nogps-sizefirst
+  screen 0: org.chromium.chrome | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 16 Jan 21, 1970 6:02:40 PM | 15 Jan 21, 1970 6:02:40 PM | 14 Jan 21, 1970 6:02:40 PM | 13 Jan 21, 1970 6:02:40 PM
+  tap "Browse" (browse) at 540,483
+  screen 1: com.android.documentsui | Show roots | Recent | Search <option_menu_search> | More options | Images | Videos | BROWSE FILES IN OTHER APPS | Drive <title> | Photos <title> | RECENT FILES ON PHONE <header_title> | List view <sub_menu_list> | DIVE_NOGPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_NOGPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date>
+  tap "DIVE_NOGPS_2.jpg" (wanted file) at 350,2051
+  RESULT [{"input":"mixed","strategy":"size-first","name":"DIVE_NOGPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:27:29.000Z","ok":true,"bytes":435537,"size":435537,"ms":581},{"done":true,"input":"mixed","strategy":"size-first","count":1}]
+
+== browse-Photos-gps-opfs
+  screen 0: org.chromium.chrome | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 16 Jan 21, 1970 6:02:40 PM | 15 Jan 21, 1970 6:02:40 PM | 14 Jan 21, 1970 6:02:40 PM | 13 Jan 21, 1970 6:02:40 PM
+  tap "Browse" (browse) at 540,483
+  screen 1: com.android.documentsui | Show roots | Recent | Search <option_menu_search> | More options | Images | Videos | BROWSE FILES IN OTHER APPS | Drive <title> | Photos <title> | RECENT FILES ON PHONE <header_title> | List view <sub_menu_list> | DIVE_NOGPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_NOGPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date>
+  tap "DIVE_GPS_2.jpg" (wanted file) at 830,2051
+  RESULT [{"input":"mixed","strategy":"opfs","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T20:27:29.000Z","ok":true,"bytes":435663,"size":435663,"ms":673},{"done":true,"input":"mixed","strategy":"opfs","count":1}]
+
+== browse-Photos-app-main
+  [page] picked demo-reef-9m.jpg 10808 bytes type "image/jpeg"
+  [page] read demo-reef-9m.jpg · JPEG 1600×1067 · 0.0 MB · type "image/jpeg"
+  screen 0: org.chromium.chrome | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 16 Jan 21, 1970 6:02:40 PM | 15 Jan 21, 1970 6:02:40 PM | 14 Jan 21, 1970 6:02:40 PM | 13 Jan 21, 1970 6:02:40 PM
+  tap "Browse" (browse) at 540,483
+  screen 1: com.android.documentsui | Show roots | Recent | Search <option_menu_search> | More options | Images | Videos | BROWSE FILES IN OTHER APPS | Drive <title> | Photos <title> | RECENT FILES ON PHONE <header_title> | List view <sub_menu_list> | DIVE_NOGPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_1.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_NOGPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date> | DIVE_GPS_2.jpg <title> | 436 kB <details> | 8:27 PM <date>
+  tap "DIVE_GPS_2.jpg" (wanted file) at 830,2051
+  [page] picked DIVE_GPS_2.jpg 435663 bytes type "image/jpeg"
+  [page] read DIVE_GPS_2.jpg · JPEG 2000×1333 · 0.4 MB · type "image/jpeg"
+  RESULT {"name":"DIVE_GPS_2.jpg","status":"ready","state":"Ready","info":"2000x1333"}
+
+== browse-Photos-app-fixed
+  ERROR page.click: Timeout 15000ms exceeded.
+Call log:
+  - waiting for locator('#addBtn')
+
++ for PKG in org.chromium.chrome com.android.chrome
++ '[' -n org.chromium.chrome ']'
++ '[' com.android.chrome '!=' org.chromium.chrome ']'
++ continue
++ adb logcat -d -t 3000
