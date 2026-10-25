@@ -1,0 +1,68 @@
+{
+  "mixed-sizefirst-photos": [
+    {
+      "input": "mixed",
+      "strategy": "size-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T18:07:15.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 180
+    },
+    {
+      "done": true,
+      "input": "mixed",
+      "strategy": "size-first",
+      "count": 1
+    }
+  ],
+  "mixed-readfirst-photos": [],
+  "mixed-sizefirst-files": [],
+  "images-sizefirst": [
+    {
+      "input": "images",
+      "strategy": "size-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T18:07:15.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 191
+    },
+    {
+      "done": true,
+      "input": "images",
+      "strategy": "size-first",
+      "count": 1
+    }
+  ],
+  "images-readfirst": [],
+  "mixedext-sizefirst": [
+    {
+      "input": "mixedext",
+      "strategy": "size-first",
+      "name": "DIVE_GPS_2.jpg",
+      "type": "image/jpeg",
+      "lastModified": "2026-10-25T18:07:15.000Z",
+      "ok": true,
+      "bytes": 435663,
+      "size": 435663,
+      "ms": 102
+    },
+    {
+      "done": true,
+      "input": "mixedext",
+      "strategy": "size-first",
+      "count": 1
+    }
+  ],
+  "app-current": {
+    "name": "DIVE_GPS_2.jpg",
+    "status": "ready",
+    "state": "Ready",
+    "info": "2000x1333"
+  }
+}

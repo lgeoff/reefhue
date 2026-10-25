@@ -1,0 +1,69 @@
+device sdk_gphone64_x86_64 emulator-5554
+
+== mixed-sizefirst-photos
+  [page] Failed to load resource: the server responded with a status of 404 (File not found)
+  screen 0: com.google.android.permissioncontroller | Allow Chrome to access photos and videos on this device? <permission_message> | Select photos and videos <permission_allow_selected_button> | Allow all <permission_allow_all_button> | Don’t allow <permission_deny_button>
+  tap "Allow all" (permission) at 540,1297
+  screen 1: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 2: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  RESULT [{"input":"mixed","strategy":"size-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T18:07:15.000Z","ok":true,"bytes":435663,"size":435663,"ms":180},{"done":true,"input":"mixed","strategy":"size-first","count":1}]
+
+== mixed-readfirst-photos
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  screen 2: com.android.chrome | Chrome notifications make things easier | You’ll be able to easily manage media controls, Incognito sessions, downloads and more | No thanks <negative_button> | Continue <positive_button>
+  (nothing to tap)
+  screen 3: com.android.chrome | Chrome notifications make things easier | You’ll be able to easily manage media controls, Incognito sessions, downloads and more | No thanks <negative_button> | Continue <positive_button>
+  (nothing to tap)
+  RESULT []
+
+== mixed-sizefirst-files
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  screen 2: com.android.chrome | Chrome notifications make things easier | You’ll be able to easily manage media controls, Incognito sessions, downloads and more | No thanks <negative_button> | Continue <positive_button>
+  (nothing to tap)
+  screen 3: com.android.chrome | Chrome notifications make things easier | You’ll be able to easily manage media controls, Incognito sessions, downloads and more | No thanks <negative_button> | Continue <positive_button>
+  (nothing to tap)
+  RESULT []
+
+== images-sizefirst
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  RESULT [{"input":"images","strategy":"size-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T18:07:15.000Z","ok":true,"bytes":435663,"size":435663,"ms":191},{"done":true,"input":"images","strategy":"size-first","count":1}]
+
+== images-readfirst
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  screen 2: com.android.chrome | Chrome notifications make things easier | You’ll be able to easily manage media controls, Incognito sessions, downloads and more | No thanks <negative_button> | Continue <positive_button>
+  (nothing to tap)
+  screen 3: com.android.chrome | Chrome notifications make things easier | You’ll be able to easily manage media controls, Incognito sessions, downloads and more | No thanks <negative_button> | Continue <positive_button>
+  (nothing to tap)
+  RESULT []
+
+== mixedext-sizefirst
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  RESULT [{"input":"mixedext","strategy":"size-first","name":"DIVE_GPS_2.jpg","type":"image/jpeg","lastModified":"2026-10-25T18:07:15.000Z","ok":true,"bytes":435663,"size":435663,"ms":102},{"done":true,"input":"mixedext","strategy":"size-first","count":1}]
+
+== app-current
+  [page] picked demo-reef-9m.jpg 186820 bytes type "image/jpeg"
+  [page] read demo-reef-9m.jpg · JPEG 1600×1067 · 0.2 MB · type "image/jpeg"
+  screen 0: com.android.chrome | Go back | Select images | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM
+  tap "com.android.chrome:id/bitmap_view" (photo tile 0 of 4) at 896,403
+  screen 1: com.android.chrome | Cancel selection | 1 selected <down> | Done <done> | Camera <special_tile_label> | Browse <special_tile_label> | 1000000022 Jan 21, 1970 6:02:31 PM | 1000000021 Jan 21, 1970 6:02:31 PM | 1000000020 Jan 21, 1970 6:02:31 PM | 1000000019 Jan 21, 1970 6:02:31 PM | Zoom in <zoom>
+  tap "Done" (confirm) at 959,143
+  [page] picked DIVE_GPS_2.jpg 435663 bytes type "image/jpeg"
+  [page] read DIVE_GPS_2.jpg · JPEG 2000×1333 · 0.4 MB · type "image/jpeg"
+  RESULT {"name":"DIVE_GPS_2.jpg","status":"ready","state":"Ready","info":"2000x1333"}

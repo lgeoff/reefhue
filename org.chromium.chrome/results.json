@@ -1,0 +1,14 @@
+{
+  "mixed-sizefirst-photos": [],
+  "mixed-readfirst-photos": [],
+  "mixed-sizefirst-files": [],
+  "images-sizefirst": [],
+  "images-readfirst": [],
+  "mixedext-sizefirst": [],
+  "app-current": {
+    "name": "demo-reef-9m.jpg",
+    "status": "ready",
+    "state": "Ready",
+    "info": "1600x1067"
+  }
+}
