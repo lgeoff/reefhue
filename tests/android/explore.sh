@@ -1,7 +1,8 @@
 #!/bin/bash
 # First look at the emulator: Android version, browsers, picker apps.
-set -x
 mkdir -p out
+exec > >(tee out/explore.txt) 2>&1
+set -x
 adb shell getprop ro.build.version.release
 adb shell pm list packages | grep -iE "chrome|webview|photos|gallery|documentsui|files|media" | sort
 adb shell dumpsys package com.android.chrome | grep -E "versionName|versionCode" | head -4

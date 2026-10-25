@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Picker test</title>
+<style>
+  body { font: 15px system-ui, sans-serif; margin: 16px; }
+  label { display: block; padding: 18px; margin: 10px 0; background: #1565b0; color: #fff; border-radius: 8px; text-align: center; font-size: 18px; }
+  pre { white-space: pre-wrap; font-size: 12px; }
+</style>
+</head>
+<body>
+<!-- One input per accept configuration; the reading strategy is chosen by the test driver. -->
+<label for="mixed" id="lmixed">image/*,video/*</label>
+<input type="file" id="mixed" accept="image/*,video/*" multiple hidden>
+<label for="mixedext" id="lmixedext">image/*,video/*,.mov,.mp4,.m4v</label>
+<input type="file" id="mixedext" accept="image/*,video/*,.mov,.mp4,.m4v" multiple hidden>
+<label for="images" id="limages">image/*</label>
+<input type="file" id="images" accept="image/*" multiple hidden>
+<label for="any" id="lany">no accept</label>
+<input type="file" id="any" multiple hidden>
+<pre id="log"></pre>
+<script>
+window.results = [];
+window.strategy = 'read-first';
+const log = (o) => { window.results.push(o); document.getElementById('log').textContent += JSON.stringify(o) + '\n'; };
+const err = (e) => `${e?.name || 'Error'}: ${(e?.message || String(e)).slice(0, 80)}`;
+
+async function readWith(strategy, f) {
+  const t0 = performance.now();
+  try {
+    let n;
+    if (strategy === 'size-first') { void f.size; n = (await f.arrayBuffer()).byteLength; }
+    else if (strategy === 'lastmodified-first') { void f.lastModified; n = (await f.arrayBuffer()).byteLength; }
+    else if (strategy === 'slice-first') { await f.slice(0, 4096).arrayBuffer(); n = (await f.arrayBuffer()).byteLength; }
+    else if (strategy === 'read-later') { await new Promise((r) => setTimeout(r, 2500)); n = (await f.arrayBuffer()).byteLength; }
+    else if (strategy === 'filereader') { n = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.byteLength); r.onerror = () => rej(r.error); r.readAsArrayBuffer(f); }); }
+    else if (strategy === 'stream') { const rd = f.stream().getReader(); n = 0; for (;;) { const { done, value } = await rd.read(); if (done) break; n += value.length; } }
+    else if (strategy === 'opfs') {
+      const root = await navigator.storage.getDirectory();
+      const fh = await root.getFileHandle('copy-' + Date.now(), { create: true });
+      const w = await fh.createWritable();
+      await f.stream().pipeTo(w);
+      const copy = await fh.getFile();
+      n = copy.size; await copy.slice(0, 16).arrayBuffer();
+    }
+    else { n = (await f.arrayBuffer()).byteLength; } // read-first
+    // metadata only after the bytes are in hand
+    return { ok: true, bytes: n, size: f.size, ms: Math.round(performance.now() - t0) };
+  } catch (e) { return { ok: false, error: err(e), ms: Math.round(performance.now() - t0) }; }
+}
+
+for (const id of ['mixed', 'mixedext', 'images', 'any']) {
+  document.getElementById(id).addEventListener('change', async (ev) => {
+    const files = [...ev.target.files];
+    const strategy = window.strategy;
+    // start every read before anything else touches the files
+    const runs = files.map((f) => readWith(strategy, f));
+    const res = await Promise.all(runs);
+    files.forEach((f, i) => log({ input: id, strategy, name: f.name, type: f.type, lastModified: new Date(f.lastModified).toISOString(), ...res[i] }));
+    log({ done: true, input: id, strategy, count: files.length });
+  });
+}
+log({ ready: true, ua: navigator.userAgent });
+</script>
+</body>
+</html>

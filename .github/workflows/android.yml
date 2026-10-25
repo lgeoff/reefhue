@@ -2,6 +2,8 @@ name: Android picker test
 on:
   push:
     branches: [android-ci]
+permissions:
+  contents: write
 jobs:
   emulator:
     runs-on: ubuntu-latest
@@ -18,8 +20,8 @@ jobs:
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
       - name: Chromium snapshot folders
         run: |
-          curl -s "https://commondatastorage.googleapis.com/chromium-browser-snapshots/?prefix=Android&delimiter=/" | grep -o '<Prefix>[^<]*</Prefix>' | head -20
-          for d in Android Android_Arm64 Android_x64 Android_x86; do echo "$d: $(curl -s https://commondatastorage.googleapis.com/chromium-browser-snapshots/$d/LAST_CHANGE)"; done
+          mkdir -p out; curl -s "https://commondatastorage.googleapis.com/chromium-browser-snapshots/?prefix=Android&delimiter=/" | grep -o "<Prefix>[^<]*</Prefix>" | head -20 | tee out/snapshots.txt
+          for d in Android Android_Arm64 Android_x64 Android_x86; do echo "$d: $(curl -s https://commondatastorage.googleapis.com/chromium-browser-snapshots/$d/LAST_CHANGE)"; done | tee -a out/snapshots.txt
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
@@ -29,8 +31,11 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           script: bash tests/android/explore.sh ${{ matrix.api }}
-      - uses: actions/upload-artifact@v4
+      - name: Publish results to a branch
         if: always()
-        with:
-          name: android-${{ matrix.api }}
-          path: out/
+        run: |
+          mkdir -p out && cp -r out /tmp/results && cd /tmp/results
+          git init -q && git checkout -q -b r
+          git config user.name ci && git config user.email ci@example.com
+          git add -A && git commit -qm "android ${{ matrix.api }} results ${{ github.sha }}" || true
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" r:refs/heads/android-results-${{ matrix.api }}
