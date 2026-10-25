@@ -42,6 +42,9 @@ for f in DIVE_NOGPS_1 DIVE_GPS_1 DIVE_NOGPS_2 DIVE_GPS_2; do
 done
 adb shell content query --uri content://media/external/images/media --projection _id:_display_name:date_modified | tee out/mediastore.txt
 
+# the live app (main) next to this branch's app, to compare
+git fetch -q origin main && mkdir -p web-main && git archive origin/main web | tar -x --strip-components=1 -C web-main
+
 # serve the repo on the device's localhost
 python3 -m http.server 8000 >/dev/null 2>&1 &
 adb reverse tcp:8000 tcp:8000

@@ -11,6 +11,7 @@ import { demoPhoto, demoClip } from './demo.js';
 import { Tour, tourSeen, markTourSeen } from './tour.js';
 import { transmuxTs } from './ts.js';
 import { RAW_EXT } from './formats.js';
+import { takeFiles, stableFile, clearPicked, usesCopies } from './pick.js';
 
 const $ = (id) => document.getElementById(id);
 const PREVIEW_MAX = 1600; // long edge of the live preview buffer
@@ -94,6 +95,9 @@ const isAviFile = (f) => /\.avi$/i.test(f.name) || /x-msvideo|\/avi$/i.test(f.ty
 // extension first: Windows reports .mts as "model/vnd.mts", .ts as TypeScript
 const isVideoFile = (f) => VIDEO_EXT.test(f.name) || f.type.startsWith('video/') || isTsFile(f);
 const isImageFile = (f) => !isVideoFile(f) && (f.type.startsWith('image/') || /\.(jpe?g|jfif|png|webp|avif|gif|bmp|heic|heif|hif|tiff?)$/i.test(f.name) || RAW_EXT.test(f.name) || !f.type);
+// frames per second of an MP4 track; the edit list's start offset (B-frame
+// delay) is part of the frames' time span, not a shortening of it
+const trackFps = (t) => Math.round((t.samples.count / Math.max(t.duration + (t.mediaTime || 0) / t.timescale, 1e-3)) * 100) / 100;
 const baseName = (n) => n.replace(/\.[^.]+$/, '') || 'reefhue';
 
 // ----------------------------------------------------------- item model
@@ -450,7 +454,8 @@ function bindStage() {
 
 // ------------------------------------------------------------- queue
 function addFiles(list) {
-  for (const f of list) console.info('picked', f.name, `${f.size} bytes`, `type "${f.type}"`);
+  // name and type only: reading .size first can make Android refuse the file
+  for (const f of list) console.info('picked', f.name, `type "${f.type}"`);
   const files = [...list].filter((f) => isVideoFile(f) || isImageFile(f));
   const skipped = list.length - files.length;
   if (skipped) toast(`${skipped} file${skipped > 1 ? 's' : ''} skipped: not a photo or video.`);
@@ -458,14 +463,22 @@ function addFiles(list) {
   // the demo placeholder makes way for the user's own files
   if (st.items.length === 1 && st.items[0].demo && st.items[0].status === 'ready') st.items = [];
   const added = files.map((file) => ({
-    id: st.nextId++, file, name: file.name, kind: isVideoFile(file) ? 'video' : 'image', size: file.size,
+    id: st.nextId++, file, name: file.name, kind: isVideoFile(file) ? 'video' : 'image', size: usesCopies ? 0 : file.size,
     w: 0, h: 0, duration: 0, fps: 0, thumbUrl: '',
     preset: 'auto', user: presetValues('auto'), locked: null,
     status: 'ready', progress: 0, stateText: 'Ready', result: null,
   }));
   for (const item of added) {
     if (item.kind === 'image') item.ready = readPhoto(item);
-    else if (isTsFile(item.file)) item.ready = prepareTs(item);
+    else if (usesCopies) {
+      // wait for the private copy, then use it (and repackage transport streams)
+      const ts = isTsFile(item.file);
+      item.stateText = 'Preparing…';
+      item.ready = stableFile(item.file).catch(() => item.file).then((f) => {
+        item.file = f; item.size = f.size; item.stateText = 'Ready'; updateItemEl(item);
+        return ts ? prepareTs(item) : undefined;
+      });
+    } else if (isTsFile(item.file)) item.ready = prepareTs(item);
     else if (isAviFile(item.file)) {
       Object.assign(item, { status: 'error', unplayable: true, stateText: 'AVI can’t be played in a browser. Convert it to MP4 first (for example with HandBrake).' });
       item.ready = Promise.resolve();
@@ -492,6 +505,7 @@ function bindPicker(input) {
   input.addEventListener('change', () => {
     if (!input.files.length) return;
     const files = [...input.files];
+    takeFiles(files); // first, before anything else touches them
     // a new element, not cloneNode(): clones carry the selected files along
     const fresh = document.createElement('input');
     for (const a of input.attributes) fresh.setAttribute(a.name, a.value);
@@ -539,12 +553,14 @@ function readPhoto(item) {
   const original = item.file;
   // the first photo starts reading right away, before anything else can run
   const first = photoChain === idleChain;
-  const early = first ? loadPhotoFile(original) : null;
+  // on Android, the private copy made at pick time (falls back to the original)
+  const load = () => stableFile(original).catch(() => original).then(loadPhotoFile);
+  const early = first ? load() : null;
   early?.catch(() => {});
   // a failed photo must not stop the ones after it
   photoChain = photoChain.catch(() => {}).then(async () => {
     try {
-      const { file, info } = await (early || loadPhotoFile(original));
+      const { file, info } = await (early || load());
       console.info('read', describe(info, item.name));
       item.file = file;
       item.info = info;
@@ -617,7 +633,7 @@ async function probe(item) {
     try {
       const d = await openMp4(item.file);
       if (d.video) {
-        item.fps = Math.round((d.video.samples.count / Math.max(d.video.duration, 1e-3)) * 100) / 100;
+        item.fps = trackFps(d.video);
         codec = d.video.family;
       }
     } catch { /* not MP4: fps from playback later */ }
@@ -842,6 +858,10 @@ async function loadVideo(item) {
   }
   st.kind = 'video'; st.bitmap = null;
   st.srcW = v.videoWidth; st.srcH = v.videoHeight; st.smooth = null;
+  if (!item.fps) {
+    // exact rate from the MP4/MOV index when there is one; playback estimate otherwise
+    try { const d = await openMp4(item.file); if (d.video) item.fps = trackFps(d.video); } catch { /* not MP4 */ }
+  }
   st.fps = item.fps || (item.fps = await estimateFps());
   await seekTo(0);
   if (st.cur !== item) return;
@@ -1233,13 +1253,14 @@ function bindInputs() {
   }
   bindPicker($('fileInput'));
   bindPicker($('fileInputAny'));
+  clearPicked();
   let depth = 0;
   window.addEventListener('dragenter', (e) => { if ([...e.dataTransfer.types].includes('Files')) { depth++; $('drop').hidden = false; } });
   window.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; $('drop').hidden = true; } });
   window.addEventListener('dragover', (e) => e.preventDefault());
   window.addEventListener('drop', (e) => {
     e.preventDefault(); depth = 0; $('drop').hidden = true;
-    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+    if (e.dataTransfer.files.length) { const files = [...e.dataTransfer.files]; takeFiles(files); addFiles(files); }
   });
   $('qList').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-act]');

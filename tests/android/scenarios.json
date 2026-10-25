@@ -1,9 +1,134 @@
 [
-  {"name": "mixed-sizefirst-photos", "url": "http://localhost:8000/tests/android/picker.html", "setup": "window.results=[];window.strategy='size-first'", "click": "#lmixed", "app": "Photos", "want": "DIVE_GPS_2.jpg", "done": "window.results.some(r=>r.done)", "result": "window.results.filter(r=>!r.ready)"},
-  {"name": "mixed-readfirst-photos", "url": "http://localhost:8000/tests/android/picker.html", "setup": "window.results=[];window.strategy='read-first'", "click": "#lmixed", "app": "Photos", "want": "DIVE_GPS_2.jpg", "done": "window.results.some(r=>r.done)", "result": "window.results.filter(r=>!r.ready)"},
-  {"name": "mixed-sizefirst-files", "url": "http://localhost:8000/tests/android/picker.html", "setup": "window.results=[];window.strategy='size-first'", "click": "#lmixed", "app": "Files", "want": "DIVE_GPS_2.jpg", "done": "window.results.some(r=>r.done)", "result": "window.results.filter(r=>!r.ready)"},
-  {"name": "images-sizefirst", "url": "http://localhost:8000/tests/android/picker.html", "setup": "window.results=[];window.strategy='size-first'", "click": "#limages", "app": "Photos", "want": "DIVE_GPS_2.jpg", "done": "window.results.some(r=>r.done)", "result": "window.results.filter(r=>!r.ready)"},
-  {"name": "images-readfirst", "url": "http://localhost:8000/tests/android/picker.html", "setup": "window.results=[];window.strategy='read-first'", "click": "#limages", "app": "Photos", "want": "DIVE_GPS_2.jpg", "done": "window.results.some(r=>r.done)", "result": "window.results.filter(r=>!r.ready)"},
-  {"name": "mixedext-sizefirst", "url": "http://localhost:8000/tests/android/picker.html", "setup": "window.results=[];window.strategy='size-first'", "click": "#lmixedext", "app": "Photos", "want": "DIVE_GPS_2.jpg", "done": "window.results.some(r=>r.done)", "result": "window.results.filter(r=>!r.ready)"},
-  {"name": "app-current", "url": "http://localhost:8000/web/index.html", "settle": 5000, "click": "#addBtn", "app": "Photos", "want": "DIVE_GPS_2.jpg", "done": "(() => { const c = window.reefhue && window.reefhue.cur; return !!(c && !c.demo && (c.status === 'error' || c.info)); })()", "result": "(() => { const c = window.reefhue.cur; return { name: c.name, status: c.status, state: c.stateText, details: c.errorDetails, info: c.info && (c.info.w + 'x' + c.info.h) }; })()"}
+ {
+  "name": "browse-Files-gps-sizefirst",
+  "url": "http://localhost:8000/tests/android/picker.html",
+  "setup": "window.results=[];window.strategy='size-first'",
+  "click": "#lmixed",
+  "browse": true,
+  "app": "Files",
+  "want": "DIVE_GPS_2.jpg",
+  "done": "window.results.some(r=>r.done)",
+  "result": "window.results.filter(r=>!r.ready)"
+ },
+ {
+  "name": "browse-Files-gps-readfirst",
+  "url": "http://localhost:8000/tests/android/picker.html",
+  "setup": "window.results=[];window.strategy='read-first'",
+  "click": "#lmixed",
+  "browse": true,
+  "app": "Files",
+  "want": "DIVE_GPS_2.jpg",
+  "done": "window.results.some(r=>r.done)",
+  "result": "window.results.filter(r=>!r.ready)"
+ },
+ {
+  "name": "browse-Files-nogps-sizefirst",
+  "url": "http://localhost:8000/tests/android/picker.html",
+  "setup": "window.results=[];window.strategy='size-first'",
+  "click": "#lmixed",
+  "browse": true,
+  "app": "Files",
+  "want": "DIVE_NOGPS_2.jpg",
+  "done": "window.results.some(r=>r.done)",
+  "result": "window.results.filter(r=>!r.ready)"
+ },
+ {
+  "name": "browse-Files-gps-opfs",
+  "url": "http://localhost:8000/tests/android/picker.html",
+  "setup": "window.results=[];window.strategy='opfs'",
+  "click": "#lmixed",
+  "browse": true,
+  "app": "Files",
+  "want": "DIVE_GPS_2.jpg",
+  "done": "window.results.some(r=>r.done)",
+  "result": "window.results.filter(r=>!r.ready)"
+ },
+ {
+  "name": "browse-Files-app-main",
+  "url": "http://localhost:8000/web-main/index.html",
+  "settle": 5000,
+  "click": "#addBtn",
+  "browse": true,
+  "app": "Files",
+  "want": "DIVE_GPS_2.jpg",
+  "done": "(() => { const c = window.reefhue && window.reefhue.cur; return !!(c && !c.demo && (c.status === 'error' || c.info)); })()",
+  "result": "(() => { const c = window.reefhue.cur; return { name: c.name, status: c.status, state: c.stateText, details: c.errorDetails, info: c.info && (c.info.w + 'x' + c.info.h) }; })()"
+ },
+ {
+  "name": "browse-Files-app-fixed",
+  "url": "http://localhost:8000/web/index.html",
+  "settle": 5000,
+  "click": "#addBtn",
+  "browse": true,
+  "app": "Files",
+  "want": "DIVE_GPS_2.jpg",
+  "done": "(() => { const c = window.reefhue && window.reefhue.cur; return !!(c && !c.demo && (c.status === 'error' || c.info)); })()",
+  "result": "(() => { const c = window.reefhue.cur; return { name: c.name, status: c.status, state: c.stateText, details: c.errorDetails, info: c.info && (c.info.w + 'x' + c.info.h) }; })()"
+ },
+ {
+  "name": "browse-Photos-gps-sizefirst",
+  "url": "http://localhost:8000/tests/android/picker.html",
+  "setup": "window.results=[];window.strategy='size-first'",
+  "click": "#lmixed",
+  "browse": true,
+  "app": "Photos",
+  "want": "DIVE_GPS_2.jpg",
+  "done": "window.results.some(r=>r.done)",
+  "result": "window.results.filter(r=>!r.ready)"
+ },
+ {
+  "name": "browse-Photos-gps-readfirst",
+  "url": "http://localhost:8000/tests/android/picker.html",
+  "setup": "window.results=[];window.strategy='read-first'",
+  "click": "#lmixed",
+  "browse": true,
+  "app": "Photos",
+  "want": "DIVE_GPS_2.jpg",
+  "done": "window.results.some(r=>r.done)",
+  "result": "window.results.filter(r=>!r.ready)"
+ },
+ {
+  "name": "browse-Photos-nogps-sizefirst",
+  "url": "http://localhost:8000/tests/android/picker.html",
+  "setup": "window.results=[];window.strategy='size-first'",
+  "click": "#lmixed",
+  "browse": true,
+  "app": "Photos",
+  "want": "DIVE_NOGPS_2.jpg",
+  "done": "window.results.some(r=>r.done)",
+  "result": "window.results.filter(r=>!r.ready)"
+ },
+ {
+  "name": "browse-Photos-gps-opfs",
+  "url": "http://localhost:8000/tests/android/picker.html",
+  "setup": "window.results=[];window.strategy='opfs'",
+  "click": "#lmixed",
+  "browse": true,
+  "app": "Photos",
+  "want": "DIVE_GPS_2.jpg",
+  "done": "window.results.some(r=>r.done)",
+  "result": "window.results.filter(r=>!r.ready)"
+ },
+ {
+  "name": "browse-Photos-app-main",
+  "url": "http://localhost:8000/web-main/index.html",
+  "settle": 5000,
+  "click": "#addBtn",
+  "browse": true,
+  "app": "Photos",
+  "want": "DIVE_GPS_2.jpg",
+  "done": "(() => { const c = window.reefhue && window.reefhue.cur; return !!(c && !c.demo && (c.status === 'error' || c.info)); })()",
+  "result": "(() => { const c = window.reefhue.cur; return { name: c.name, status: c.status, state: c.stateText, details: c.errorDetails, info: c.info && (c.info.w + 'x' + c.info.h) }; })()"
+ },
+ {
+  "name": "browse-Photos-app-fixed",
+  "url": "http://localhost:8000/web/index.html",
+  "settle": 5000,
+  "click": "#addBtn",
+  "browse": true,
+  "app": "Photos",
+  "want": "DIVE_GPS_2.jpg",
+  "done": "(() => { const c = window.reefhue && window.reefhue.cur; return !!(c && !c.demo && (c.status === 'error' || c.info)); })()",
+  "result": "(() => { const c = window.reefhue.cur; return { name: c.name, status: c.status, state: c.stateText, details: c.errorDetails, info: c.info && (c.info.w + 'x' + c.info.h) }; })()"
+ }
 ]
