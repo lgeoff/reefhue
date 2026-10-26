@@ -1,0 +1,19 @@
+# Cloudflare Pages response headers.
+# Cross-origin isolation lets the browser enable SharedArrayBuffer, which the
+# engine uses to run on several CPU cores. Everything the page loads from other
+# origins must then allow it (Google Fonts does, with crossorigin on the link).
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: same-origin
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# the page itself is always revalidated; scripts, styles and wasm carry ?v=<commit>
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/*.wasm
+  Content-Type: application/wasm

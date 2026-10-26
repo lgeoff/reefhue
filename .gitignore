@@ -1,7 +1,7 @@
+__pycache__/
+_site/
 engine/target/
+node_modules/
 tests/out/
 tests/shots/
 web/_clips/
-node_modules/
-__pycache__/
-_site/
