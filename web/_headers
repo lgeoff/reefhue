@@ -15,5 +15,18 @@
   Cache-Control: no-cache
 /index.html
   Cache-Control: no-cache
+/picker-test.html
+  X-Robots-Tag: noindex
+/reefhue-single-file.html
+  X-Robots-Tag: noindex
+/og-image.jpg
+  ! Cross-Origin-Resource-Policy
+  Cross-Origin-Resource-Policy: cross-origin
 /*.wasm
   Content-Type: application/wasm
+
+# the pages.dev addresses duplicate reefhue.com: keep them out of search results
+https://reefhue.pages.dev/*
+  X-Robots-Tag: noindex
+https://:branch.reefhue.pages.dev/*
+  X-Robots-Tag: noindex

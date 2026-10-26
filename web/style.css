@@ -434,3 +434,22 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
 /* sound toggle in the video transport */
 .icon.mute { display: inline-grid; place-items: center; color: var(--muted); }
 .icon.mute[aria-pressed="false"] { color: var(--ink); }
+
+/* ---------------------------------------------------------------- about */
+.about { gap: 8px; color: var(--muted); font-size: 13px; padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); }
+.about h1 { font: 600 17px/1.2 var(--font-display); letter-spacing: 0.02em; color: var(--ink); margin: 0; }
+.about h2 { margin-top: 8px; }
+.about p { margin: 0; }
+.about b { color: var(--ink); font-weight: 500; }
+.about details { border-top: 1px solid var(--line); }
+.about details:last-of-type { border-bottom: 1px solid var(--line); }
+.about summary { cursor: pointer; list-style: none; display: flex; gap: 8px; align-items: baseline; padding: 9px 0; color: var(--ink); }
+.about summary::-webkit-details-marker { display: none; }
+.about summary::before { content: "▸"; font-size: 10px; color: var(--muted); transition: transform 0.15s; }
+.about details[open] > summary::before { transform: rotate(90deg); }
+.about details p { padding: 0 0 10px 18px; }
+@media (max-width: 900px) {
+  .about { font-size: 14px; }
+  .about summary { padding: 13px 0; min-height: 44px; box-sizing: border-box; align-items: center; }
+}
+@media (prefers-reduced-motion: reduce) { .about summary::before { transition: none; } }

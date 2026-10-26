@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /picker-test.html
+Disallow: /reefhue-single-file.html
+
+Sitemap: https://reefhue.com/sitemap.xml

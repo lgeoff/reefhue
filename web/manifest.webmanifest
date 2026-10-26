@@ -1,7 +1,7 @@
 {
   "name": "Reefhue",
   "short_name": "Reefhue",
-  "description": "Restore the colours of underwater photos and videos, on your device.",
+  "description": "Underwater color correction for photos and videos. Free, and it runs on your device: nothing is uploaded.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#141515",

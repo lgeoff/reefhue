@@ -3,7 +3,61 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Reefhue</title>
+<title>Reefhue · Underwater photo and video color correction, free in your browser</title>
+<meta name="description" content="Restore the reds and yellows that water removes from underwater photos and videos. Automatic color correction for dive photos and GoPro, phone or camera videos. Free, no sign-up, and nothing is uploaded: it runs in your browser.">
+<link rel="canonical" href="https://reefhue.com/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Reefhue">
+<meta property="og:url" content="https://reefhue.com/">
+<meta property="og:title" content="Reefhue · Underwater color correction for photos and videos">
+<meta property="og:description" content="Bring back the reds and yellows water takes away. Free, automatic, and private: your photos and videos never leave your device.">
+<meta property="og:image" content="https://reefhue.com/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="An underwater reef photo, blue on the left and with restored colours on the right">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Reefhue · Underwater color correction for photos and videos">
+<meta name="twitter:description" content="Bring back the reds and yellows water takes away. Free, automatic, and private: your files never leave your device.">
+<meta name="twitter:image" content="https://reefhue.com/og-image.jpg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://reefhue.com/#website",
+      "name": "Reefhue",
+      "url": "https://reefhue.com/"
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "https://reefhue.com/#app",
+      "name": "Reefhue",
+      "url": "https://reefhue.com/",
+      "description": "Restores the colours of underwater photos and videos. Measures the water colour in each photo or video frame and corrects it automatically, with sliders to fine-tune. Runs entirely in the browser; files are never uploaded.",
+      "applicationCategory": "MultimediaApplication",
+      "applicationSubCategory": "Photo and video editor",
+      "operatingSystem": "Any (runs in a web browser)",
+      "browserRequirements": "Requires JavaScript and WebAssembly",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "image": "https://reefhue.com/og-image.jpg",
+      "screenshot": "https://reefhue.com/og-image.jpg",
+      "featureList": [
+        "Automatic underwater colour correction for photos and videos",
+        "Water presets for shallow, deep blue and green water",
+        "Before and after split view",
+        "Batch processing with zip download",
+        "JPEG, HEIC, RAW, TIFF, PNG and WebP photos",
+        "MP4, MOV, MTS/AVCHD, MKV and WebM videos, original sound kept",
+        "Runs on your device: nothing is uploaded"
+      ],
+      "isPartOf": { "@id": "https://reefhue.com/#website" }
+    }
+  ]
+}
+</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="reefhue-version" content="dev">
 <meta name="theme-color" content="#1c1d1e">
@@ -165,6 +219,36 @@
       <button type="button" id="speedBtn" class="link">Test export speed on this device</button>
       <span class="version">Version <span id="version">dev</span> · <a href="#debug" id="debugLink">debug log</a></span>
     </div>
+
+    <section class="panel about" aria-labelledby="aboutTitle">
+      <h1 id="aboutTitle">Underwater colour correction for photos and videos</h1>
+      <p>Water absorbs red light first, then orange and yellow, so underwater photos and videos come out blue or green. Reefhue measures the water colour in each photo, or in every frame of a video, and brings those colours back automatically. Sliders let you fine-tune the result.</p>
+      <p>It is free, needs no account, and runs entirely in your browser: your photos and videos are never uploaded.</p>
+      <h2>Supported files</h2>
+      <p><b>Photos:</b> JPEG, HEIC, TIFF, PNG, WebP and camera RAW files (ARW, CR2, CR3, NEF, DNG, ORF, RW2, RAF and more, using the preview the camera stores in the file).<br><b>Videos:</b> MP4, MOV, MTS and M2TS (AVCHD), MKV and WebM, from action cameras, phones, drones and dive cameras.</p>
+      <p>Photos are saved at full resolution as JPEG, PNG or WebP. Videos are saved as MP4 or WebM, with the original sound kept.</p>
+      <h2>Questions</h2>
+      <details>
+        <summary>Is Reefhue free?</summary>
+        <p>Yes. There is no sign-up, no watermark and no limit on the number of files.</p>
+      </details>
+      <details>
+        <summary>Are my photos uploaded anywhere?</summary>
+        <p>No. Everything is processed on your phone or computer, in the browser. Nothing is sent to a server.</p>
+      </details>
+      <details>
+        <summary>Does it work with GoPro and phone videos?</summary>
+        <p>Yes. Open the MP4 or MOV file straight from the camera or the phone gallery. Auto follows the water colour as the scene changes, or you can keep one frame’s correction for the whole clip.</p>
+      </details>
+      <details>
+        <summary>Can I correct many photos at once?</summary>
+        <p>Yes. Add several files to make a batch. Each file uses Auto unless you change its settings. Then process them all and download them as one zip file.</p>
+      </details>
+      <details>
+        <summary>Why do underwater photos look blue or green?</summary>
+        <p>Water filters out red light within a few metres, and orange and yellow a little deeper. The deeper and further away the subject, the less of those colours reach the camera. Green water adds plankton and algae to the mix. Reefhue estimates how much of each colour is missing and restores it.</p>
+      </details>
+    </section>
   </aside>
 </main>
 

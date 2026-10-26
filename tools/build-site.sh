@@ -16,5 +16,8 @@ cp web/index.html /tmp/reefhue-index.html && cp _site/index.html web/index.html
 cp /tmp/reefhue-index.html web/index.html
 cp dist/reefhue.html _site/reefhue-single-file.html
 touch _site/.nojekyll
+# sitemap date: the day of the commit being built
+LASTMOD=$(git log -1 --format=%cs 2>/dev/null || date -u +%F)
+sed -i.bak "s/LASTMOD/$LASTMOD/" _site/sitemap.xml && rm -f _site/sitemap.xml.bak
 "$PY" tools/cachebust.py _site "$VER"
 echo "built _site for $VER"
