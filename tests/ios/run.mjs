@@ -92,19 +92,16 @@ async function scenario(url, file, { second = false } = {}) {
     await tap(lib);
     await sleep(3500);
     await snap(`r${round}-picker`); await source(`r${round}-picker`);
-    // the picked video: newest item whose label says it's a video
-    const want = file.startsWith('IMG') ? 0 : 1;
-    const vids = await d.$$('-ios predicate string:label BEGINSWITH "Video" OR label CONTAINS "Video,"');
-    log('video cells', vids.length);
-    const labels = []; for (const v of vids) labels.push(await v.getAttribute('label').catch(() => '?'));
-    log('labels', JSON.stringify(labels));
-    const cell = vids[Math.min(want, vids.length - 1)];
-    if (!cell) { log('no video in picker'); return; }
+    // the video thumbnail: IMG_0001.MOV was added with a 10:00 time stamp, dive_h264.mp4 with 11:00
+    const when = file.startsWith('IMG') ? '10:00' : '11:00';
+    const cell = await findAny([`-ios predicate string:type == "XCUIElementTypeImage" AND label BEGINSWITH "Video," AND label CONTAINS "${when}"`], 10000);
+    if (!cell) { log('no video in picker'); await source(`r${round}-nocell`); return; }
+    log('cell', await cell.getAttribute('label'));
     await tap(cell);
     await sleep(1200);
     await snap(`r${round}-selected`);
-    const addBtn = await findAny(['~Add', '-ios predicate string:label == "Add" AND type == "XCUIElementTypeButton"', '~Done'], 4000);
-    if (addBtn) { await tap(addBtn); log('tapped Add'); } else log('no Add button (single pick?)');
+    const done = await findAny(['~Done', '~Add', '-ios predicate string:type == "XCUIElementTypeButton" AND (label == "Done" OR label == "Add")'], 4000);
+    if (done) { await tap(done); log('tapped', await done.getAttribute('label')); } else log('no Done button');
     const t0 = Date.now();
     let last = '';
     while (Date.now() - t0 < 40000) {
