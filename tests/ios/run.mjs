@@ -92,16 +92,29 @@ async function scenario(url, file, { second = false } = {}) {
     await tap(lib);
     await sleep(3500);
     await snap(`r${round}-picker`); await source(`r${round}-picker`);
+    // the picker can reopen on Collections: go to Photos
+    const photosTab = await findAny(['-ios predicate string:type == "XCUIElementTypeButton" AND label == "Photos"'], 3000);
+    if (photosTab) { await photosTab.click().catch(() => tap(photosTab)); await sleep(1500); }
     // the video thumbnail: IMG_0001.MOV was added with a 10:00 time stamp, dive_h264.mp4 with 11:00
     const when = file.startsWith('IMG') ? '10:00' : '11:00';
-    const cell = await findAny([`-ios predicate string:type == "XCUIElementTypeImage" AND label BEGINSWITH "Video," AND label CONTAINS "${when}"`], 10000);
-    if (!cell) { log('no video in picker'); await source(`r${round}-nocell`); return; }
-    log('cell', await cell.getAttribute('label'));
-    await tap(cell);
-    await sleep(1200);
+    const cellSel = `-ios predicate string:type == "XCUIElementTypeImage" AND label BEGINSWITH "Video," AND label CONTAINS "${when}"`;
+    const doneSel = '-ios predicate string:type == "XCUIElementTypeButton" AND (label == "Done" OR label == "Add")';
+    let selected = false;
+    for (let attempt = 1; attempt <= 4 && !selected; attempt++) {
+      const cell = await findAny([cellSel], 10000);
+      if (!cell) { log('no video in picker'); await source(`r${round}-nocell`); return; }
+      if (attempt === 1) log('cell', await cell.getAttribute('label'));
+      if (attempt % 2) await cell.click().catch(async () => tap(cell)); else await tap(cell);
+      await sleep(1500);
+      const done = await findAny([doneSel], 3000);
+      selected = !!done && (await done.getAttribute('enabled').catch(() => 'false')) === 'true';
+      log(`select attempt ${attempt}: Done enabled = ${selected}`);
+    }
     await snap(`r${round}-selected`);
-    const done = await findAny(['~Done', '~Add', '-ios predicate string:type == "XCUIElementTypeButton" AND (label == "Done" OR label == "Add")'], 4000);
-    if (done) { await tap(done); log('tapped', await done.getAttribute('label')); } else log('no Done button');
+    if (!selected) { await source(`r${round}-notselected`); return; }
+    const done = await findAny([doneSel], 3000);
+    await done.click().catch(async () => tap(done));
+    log('tapped Done');
     const t0 = Date.now();
     let last = '';
     while (Date.now() - t0 < 40000) {
