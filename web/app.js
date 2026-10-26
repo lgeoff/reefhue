@@ -84,6 +84,30 @@ function busy(text, frac) {
   }
 }
 const once = (el, ev) => new Promise((res) => el.addEventListener(ev, res, { once: true }));
+const timeout = (ms, what) => new Promise((_, rej) => setTimeout(() => rej(new Error(what)), ms));
+
+/**
+ * Wait until a video has a frame to show. iOS Safari loads only a video's
+ * metadata until it is played or seeked, so 'loadeddata' alone can wait
+ * forever: ask for a frame with a seek, then with a short muted play.
+ */
+async function videoReady(el, name, ms = 20000) {
+  const failed = once(el, 'error').then(() => { throw new Error('unsupported video'); });
+  failed.catch(() => {});
+  if (el.readyState < 1) await Promise.race([once(el, 'loadedmetadata'), failed, timeout(ms, 'the video did not load')]);
+  if (el.readyState >= 2) return;
+  const frame = () => Promise.race([once(el, 'loadeddata'), once(el, 'canplay'), once(el, 'seeked')]);
+  let got = frame();
+  try { el.currentTime = Math.min(0.001, el.duration || 0.001); } catch { /* not seekable yet */ }
+  if (await Promise.race([got.then(() => true), failed, new Promise((r) => setTimeout(() => r(false), 2500))]) && el.readyState >= 2) return;
+  console.info('video', name, 'no frame after a seek (readyState', el.readyState, '), trying a muted play');
+  el.muted = true;
+  el.playsInline = true;
+  got = frame();
+  try { await Promise.race([el.play(), timeout(4000, 'play did not start')]); } catch (e) { console.info('video', name, 'play:', e?.message || e); }
+  el.pause();
+  if (el.readyState < 2) await Promise.race([got, failed, timeout(ms, 'the video did not load')]);
+}
 const fmtTime = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;
 const fmtDur = (t) => `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}`;
 const fmtMB = (b) => (b >= 1e9 ? `${(b / 1e9).toFixed(2)} GB` : `${(b / 1e6).toFixed(b >= 1e7 ? 0 : 1)} MB`);
@@ -639,10 +663,13 @@ async function probe(item) {
     } catch { /* not MP4: fps from playback later */ }
     const tv = document.createElement('video');
     tv.muted = true; tv.playsInline = true; tv.preload = 'auto';
+    tv.setAttribute('playsinline', '');
+    tv.className = 'probe-video'; // in the page but invisible: iOS may not load a detached video
+    document.body.append(tv);
     const url = URL.createObjectURL(item.file);
     tv.src = url;
     try {
-      await Promise.race([once(tv, 'loadeddata'), once(tv, 'error').then(() => { throw new Error('cannot play'); })]);
+      await videoReady(tv, item.name, 15000);
       item.w = tv.videoWidth; item.h = tv.videoHeight; item.duration = tv.duration;
       if (!item.w) throw new Error('no video');
       tv.currentTime = Math.min(1, (tv.duration || 0) / 3);
@@ -654,7 +681,7 @@ async function probe(item) {
         : codec === 'av1' ? 'This browser cannot decode AV1' : 'This browser cannot play this file';
       item.unplayable = true;
     } finally {
-      tv.removeAttribute('src'); tv.load();
+      tv.removeAttribute('src'); tv.load(); tv.remove();
       URL.revokeObjectURL(url);
     }
   }
@@ -854,10 +881,12 @@ async function loadVideo(item) {
   if (st.cur !== item) return;
   v.muted = true;
   v.src = URL.createObjectURL(item.file);
-  await Promise.race([once(v, 'loadeddata'), once(v, 'error').then(() => { throw new Error('unsupported video'); })]);
+  await videoReady(v, item.name);
+  console.info('video', item.name, `${v.videoWidth}×${v.videoHeight}`, `${(v.duration || 0).toFixed(1)} s ready`);
   if (st.cur !== item) return;
   if (!Number.isFinite(v.duration)) {
-    v.currentTime = 1e9; await once(v, 'durationchange'); v.currentTime = 0; await once(v, 'seeked');
+    v.currentTime = 1e9; await Promise.race([once(v, 'durationchange'), new Promise((r) => setTimeout(r, 3000))]);
+    v.currentTime = 0; await Promise.race([once(v, 'seeked'), new Promise((r) => setTimeout(r, 3000))]);
   }
   st.kind = 'video'; st.bitmap = null;
   st.srcW = v.videoWidth; st.srcH = v.videoHeight; st.smooth = null;
@@ -943,6 +972,8 @@ function seekTo(t) {
       gotSeek = true; check();
       setTimeout(() => { if (!gotFrame) { v.cancelVideoFrameCallback(h); gotFrame = true; check(); } }, 150);
     }, { once: true });
+    // a seek to where the video already is may never report back (iOS)
+    setTimeout(() => { if (!gotSeek || !gotFrame) { if (!gotFrame) v.cancelVideoFrameCallback?.(h); gotSeek = gotFrame = true; res(); } }, 2500);
     v.currentTime = t;
   });
 }

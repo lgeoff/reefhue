@@ -305,7 +305,8 @@
   <div class="debug-head"><b>Debug log</b><button type="button" class="btn small" id="debugCopy">Copy</button><button type="button" class="btn small ghost" id="debugClose">Close</button></div>
   <pre id="debugLog"></pre>
 </section>
-<video id="video" playsinline muted preload="auto" hidden></video>
+<!-- not display:none: iOS Safari may not decode frames of a hidden video -->
+<video id="video" class="probe-video" playsinline muted preload="auto" aria-hidden="true"></video>
 
 <script type="module" src="app.js"></script>
 </body>

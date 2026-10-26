@@ -460,3 +460,6 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
 @media (max-width: 380px) { .src-btn { display: none; } }
 /* 320 px phones (iPhone SE 1st gen): the logo alone, so the name never runs under the buttons */
 @media (max-width: 340px) { .brand .name { display: none; } }
+
+/* video elements the page draws from: in the page but invisible */
+.probe-video { position: fixed; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; z-index: -1; }
