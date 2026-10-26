@@ -1,6 +1,6 @@
 # Reefhue
 
-**Live app: https://lgeoff.github.io/reefhue/** · single-file version: [reefhue-single-file.html](https://lgeoff.github.io/reefhue/reefhue-single-file.html)
+**Live app: https://reefhue.com** · single-file version: [reefhue-single-file.html](https://reefhue.com/reefhue-single-file.html) · mirror: https://lgeoff.github.io/reefhue/
 
 Restore the colours of underwater photos and videos in the browser, one file at a time or as a batch. Drag files in, adjust, compare before/after live, download the results. All processing runs locally: a Rust engine compiled to WebAssembly analyses every frame, and exports run its per-pixel formula on the GPU. Nothing is uploaded.
 
@@ -84,7 +84,10 @@ The presets are stylised grades rather than neutral restoration, so Auto is not 
 
 ## Deployment
 
-Every push to `main` runs `.github/workflows/pages.yml`: it installs Rust with the `wasm32-unknown-unknown` target, runs the engine tests, builds `engine.wasm`, checks that it loads, builds the single-file version and publishes `web/` to GitHub Pages. The site is fully static; photos and videos never leave the visitor's computer.
+- **reefhue.com** is served by Cloudflare Pages, connected to this repository: every push to `main` deploys to production and every other branch gets a preview URL. Cloudflare runs `sh tools/build-site.sh` (output `_site/`), which stamps the version, builds the single-file version and adds `?v=<commit>` to every script, stylesheet and wasm URL. `web/_headers` sets cross-origin isolation (COOP/COEP), which enables `SharedArrayBuffer` for multi-threaded processing, and keeps the page itself from being cached stale.
+- `.github/workflows/pages.yml` runs the engine tests, rebuilds `engine.wasm`, checks that it loads and publishes the same `_site/` to GitHub Pages (the mirror above). Keep the committed `web/engine.wasm` up to date: Cloudflare deploys it as committed.
+
+The site is fully static; photos and videos never leave the visitor's device.
 
 ## Build the engine
 
