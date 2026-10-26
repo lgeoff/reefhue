@@ -53,6 +53,7 @@
         "MP4, MOV, MTS/AVCHD, MKV and WebM videos, original sound kept",
         "Runs on your device: nothing is uploaded"
       ],
+      "sameAs": ["https://github.com/lgeoff/reefhue"],
       "isPartOf": { "@id": "https://reefhue.com/#website" }
     }
   ]
@@ -77,6 +78,7 @@
     <span class="sub">Underwater colour restore · runs on your machine</span>
   </div>
   <div class="actions">
+    <a class="btn ghost icon-btn src-btn" id="srcLink" href="https://github.com/lgeoff/reefhue" target="_blank" rel="noopener" aria-label="Source code on GitHub" title="Source code on GitHub"><svg aria-hidden="true" viewBox="0 0 16 16" width="18" height="18" fill="currentColor"><!-- GitHub mark from Octicons (MIT, GitHub Inc.) --><path d="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656"/></svg><span class="btn-label">GitHub</span></a>
     <button type="button" id="helpBtn" class="btn ghost help-btn" aria-label="Help: take a guided tour"><span aria-hidden="true">?</span><span class="help-label">Help</span></button>
     <label class="btn icon-btn" id="addBtn" for="fileInput" aria-label="Add photos or videos" title="Add photos or videos"><svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18"><path d="M10 3.5v13M3.5 10h13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span class="btn-label">Add photos or videos</span></label>
     <!-- Only MIME types here: Chrome on Android uses its photo picker only when every
@@ -223,7 +225,7 @@
     <section class="panel about" aria-labelledby="aboutTitle">
       <h1 id="aboutTitle">Underwater colour correction for photos and videos</h1>
       <p>Water absorbs red light first, then orange and yellow, so underwater photos and videos come out blue or green. Reefhue measures the water colour in each photo, or in every frame of a video, and brings those colours back automatically. Sliders let you fine-tune the result.</p>
-      <p>It is free, needs no account, and runs entirely in your browser: your photos and videos are never uploaded.</p>
+      <p>It is free, needs no account, and runs entirely in your browser: your photos and videos are never uploaded. Reefhue is open source: <a href="https://github.com/lgeoff/reefhue" target="_blank" rel="noopener">see the code on GitHub</a>.</p>
       <h2>Supported files</h2>
       <p><b>Photos:</b> JPEG, HEIC, TIFF, PNG, WebP and camera RAW files (ARW, CR2, CR3, NEF, DNG, ORF, RW2, RAF and more, using the preview the camera stores in the file).<br><b>Videos:</b> MP4, MOV, MTS and M2TS (AVCHD), MKV and WebM, from action cameras, phones, drones and dive cameras.</p>
       <p>Photos are saved at full resolution as JPEG, PNG or WebP. Videos are saved as MP4 or WebM, with the original sound kept.</p>
@@ -303,7 +305,8 @@
   <div class="debug-head"><b>Debug log</b><button type="button" class="btn small" id="debugCopy">Copy</button><button type="button" class="btn small ghost" id="debugClose">Close</button></div>
   <pre id="debugLog"></pre>
 </section>
-<video id="video" playsinline muted preload="auto" hidden></video>
+<!-- not display:none: iOS Safari may not decode frames of a hidden video -->
+<video id="video" class="probe-video" playsinline muted preload="auto" aria-hidden="true"></video>
 
 <script type="module" src="app.js"></script>
 </body>
