@@ -61,6 +61,7 @@ h2 {
 .file-meta { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .actions { display: flex; gap: 8px; margin-left: auto; }
 .icon-btn svg { flex: none; }
+.src-btn { color: inherit; text-decoration: none; }
 
 .btn {
   display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
@@ -441,6 +442,7 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
 .about h2 { margin-top: 8px; }
 .about p { margin: 0; }
 .about b { color: var(--ink); font-weight: 500; }
+.about a { color: var(--ink); }
 .about details { border-top: 1px solid var(--line); }
 .about details:last-of-type { border-bottom: 1px solid var(--line); }
 .about summary { cursor: pointer; list-style: none; display: flex; gap: 8px; align-items: baseline; padding: 9px 0; color: var(--ink); }
@@ -453,3 +455,8 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
   .about summary { padding: 13px 0; min-height: 44px; box-sizing: border-box; align-items: center; }
 }
 @media (prefers-reduced-motion: reduce) { .about summary::before { transition: none; } }
+
+/* smallest phones: no room for the GitHub button in the header (the About section links to GitHub too) */
+@media (max-width: 380px) { .src-btn { display: none; } }
+/* 320 px phones (iPhone SE 1st gen): the logo alone, so the name never runs under the buttons */
+@media (max-width: 340px) { .brand .name { display: none; } }
