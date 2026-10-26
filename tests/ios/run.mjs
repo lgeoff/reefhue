@@ -39,7 +39,8 @@ async function findAny(selectors, ms = 15000) {
   const end = Date.now() + ms;
   while (Date.now() < end) {
     for (const s of selectors) {
-      try { const els = await d.$$(s); for (const el of els) if (await el.isDisplayed().catch(() => true)) return el; } catch { /* next */ }
+      // iOS reports many web elements as not displayed: take the first match
+      try { const els = await d.$$(s); if (els.length) return els[0]; } catch { /* next */ }
     }
     await sleep(500);
   }
