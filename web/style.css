@@ -430,3 +430,7 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
   .advanced > summary { padding-block: 15px; font-size: 15px; gap: 12px; min-height: 48px; box-sizing: border-box; align-items: center; }
   .advanced > summary::before { font-size: 20px; width: 22px; text-align: center; }
 }
+
+/* sound toggle in the video transport */
+.icon.mute { display: inline-grid; place-items: center; color: var(--muted); }
+.icon.mute[aria-pressed="false"] { color: var(--ink); }

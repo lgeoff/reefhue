@@ -923,8 +923,14 @@ function updateTime() {
 }
 function setMuted(m) {
   v.muted = m;
-  $('muteBtn').setAttribute('aria-pressed', m);
-  $('muteBtn').textContent = m ? 'Sound off' : 'Sound on';
+  const b = $('muteBtn');
+  b.setAttribute('aria-pressed', m);
+  b.setAttribute('aria-label', m ? 'Sound off: tap to turn on' : 'Sound on: tap to mute');
+  b.title = m ? 'Sound off' : 'Sound on';
+  // speaker icon: crossed out when muted, sound waves when on
+  b.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z" fill="currentColor"/>${m
+    ? '<path d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+    : '<path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'}</svg>`;
 }
 
 /** Seek and wait until the new frame is actually presented. */
