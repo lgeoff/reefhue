@@ -134,9 +134,9 @@ async function scenario(url, file, { second = false } = {}) {
 }
 
 const cases = [
-  ['https://reefhue.com/', 'IMG_0001.MOV', { second: true }],
-  ['http://localhost:8765/', 'IMG_0001.MOV', { second: true }],
-  ['https://reefhue.com/', 'dive_h264.mp4', {}],
+  ['http://localhost:8765/', 'IMG_0001.MOV', { second: true }], // this branch's build
+  ['http://localhost:8765/', 'dive_h264.mp4', {}],
+  ['https://reefhue.com/', 'IMG_0001.MOV', {}], // the live site, for comparison
 ];
 for (const [u, f, o] of cases) {
   try { await scenario(u, f, o); } catch (e) { log('scenario failed', e.stack || e.message); await snap('failed'); await source('failed'); }
