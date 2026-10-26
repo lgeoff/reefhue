@@ -33,6 +33,8 @@ mod minicore;
 mod math;
 use math::*;
 
+mod despeck;
+
 // ---------------------------------------------------------------- params ----
 
 /// Number of f32 slots in the settings / analysis vector shared with JS.

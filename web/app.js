@@ -12,6 +12,8 @@ import { Tour, tourSeen, markTourSeen } from './tour.js';
 import { transmuxTs } from './ts.js';
 import { RAW_EXT } from './formats.js';
 import { takeFiles, stableFile, clearPicked, usesCopies } from './pick.js';
+import { getPool } from './pool.js';
+import { specksOn, detectSpecks } from './specks.js';
 
 const $ = (id) => document.getElementById(id);
 const PREVIEW_MAX = 1600; // long edge of the live preview buffer
@@ -42,6 +44,7 @@ const SLIDERS = [
   ] },
   { group: 'Detail', items: [
     { key: 'clarity', label: 'Clarity', min: 0, max: 100, tip: 'Large-radius local contrast' },
+    { key: 'backscatter', label: 'Remove backscatter', min: 0, max: 100, fmt: (v) => (v ? `${v}` : 'Off'), tip: 'Paints out bright specks from particles in the water (photos). Higher finds fainter ones' },
   ] },
 ];
 const signed = (v) => (v > 0 ? `+${v}` : `${v}`);
@@ -156,10 +159,20 @@ function buildUI() {
         if (s.key === 'red' || s.key === 'balance') reanalyze();
         requestRender();
         itemEdited(st.cur);
+        scheduleSpecks();
       };
       input.addEventListener('input', () => { if (st.cur) { st.cur.user[s.key] = +input.value; changed(); } });
       input.addEventListener('dblclick', () => { if (st.cur) { st.cur.user[s.key] = presetValues(st.cur.preset)[s.key]; changed(); } });
       sec.append(row);
+      if (s.key === 'backscatter') {
+        const extra = document.createElement('div');
+        extra.className = 'speck-row';
+        extra.id = 'speckRow';
+        extra.hidden = true;
+        extra.innerHTML = `<label class="check"><input type="checkbox" id="showSpecks"> Mark the specks instead of removing them</label><span class="speck-count" id="speckCount" aria-live="polite"></span>`;
+        extra.querySelector('input').addEventListener('change', () => requestRender());
+        sec.append(extra);
+      }
     }
     host.append(sec);
   }
@@ -178,11 +191,13 @@ function buildUI() {
 function applyPreset(k) {
   if (!st.cur) return;
   st.cur.preset = k;
-  st.cur.user = presetValues(k);
+  // presets are about colour: backscatter removal stays as it was
+  st.cur.user = { ...presetValues(k), backscatter: st.cur.user.backscatter };
   syncSliders();
   reanalyze();
   requestRender();
   itemEdited(st.cur);
+  scheduleSpecks();
 }
 
 function syncSliders() {
@@ -196,6 +211,7 @@ function syncSliders() {
     o.textContent = s.fmt ? s.fmt(val) : signed(val);
     o.classList.toggle('changed', val !== base[s.key]);
   }
+  if ($('speckRow')) syncSpeckUI();
   const edited = KEYS.some((k) => user[k] !== base[k]);
   for (const b of document.querySelectorAll('.preset')) {
     const on = item && b.dataset.key === item.preset;
@@ -290,8 +306,115 @@ function requestRender() {
 function render() {
   if (!st.src || !st.auto || !st.cur) return;
   st.eng.process(st.src.data, st.pw, st.ph, buildSettings(st.auto, st.cur.user), st.out.data, st.thumb, st.tw, st.th);
+  const d = speckMap();
+  const mark = d && $('showSpecks').checked;
+  if (d && !mark) st.eng.fillSpecks(st.out.data, st.pw, st.ph, d.mask, d.w2, d.h2, 0, 0, st.pw / d.w2);
   afterCtx.putImageData(st.out, 0, 0);
+  if (mark) markSpecks(d);
   scheduleMetrics();
+}
+
+// ------------------------------------------------------- backscatter preview
+// The preview is too small to find specks in, so, like the export, they are
+// found on a half-resolution copy of the corrected photo (in the workers,
+// after a pause in slider changes) and painted out of the preview from there.
+const spk = { item: null, half: null, luma: null, colourKey: '', det: null, detKey: '', busy: false, again: false, timer: 0 };
+
+/** The speck map for the photo on screen, if it is on and ready. */
+function speckMap() {
+  const item = st.cur;
+  return item && st.kind === 'image' && specksOn(item.user) && spk.item === item && spk.det ? spk.det : null;
+}
+
+function markSpecks(d) {
+  const b = d.blobs, sp = st.pw / d.w2;
+  afterCtx.save();
+  afterCtx.lineWidth = Math.max(1.5, st.pw / 900);
+  afterCtx.strokeStyle = '#ffd34d';
+  afterCtx.beginPath();
+  for (let i = 0; i < b.length; i += 3) {
+    const x = b[i] * sp, y = b[i + 1] * sp, r = Math.max(4, b[i + 2] * sp + 3);
+    afterCtx.moveTo(x + r, y);
+    afterCtx.arc(x, y, r, 0, Math.PI * 2);
+  }
+  afterCtx.stroke();
+  afterCtx.restore();
+}
+
+function syncSpeckUI() {
+  const item = st.cur;
+  const photo = st.kind !== 'video';
+  $('s-backscatter').closest('.slider').hidden = !photo;
+  const on = !!item && photo && specksOn(item.user);
+  $('speckRow').hidden = !on;
+  const d = speckMap();
+  $('speckCount').textContent = !on ? '' : d ? `${d.count} speck${d.count === 1 ? '' : 's'} found in the full-size photo` : 'Looking for specks…';
+}
+
+function scheduleSpecks(delay = 300) {
+  clearTimeout(spk.timer);
+  syncSpeckUI();
+  const item = st.cur;
+  if (!item || st.kind !== 'image' || !specksOn(item.user)) return;
+  spk.timer = setTimeout(findSpecks, delay);
+}
+
+async function findSpecks() {
+  if (spk.busy) { spk.again = true; return; }
+  const item = st.cur;
+  if (!item || st.kind !== 'image' || !specksOn(item.user) || !st.auto) return;
+  spk.busy = true;
+  try {
+    const maxdim = Math.max(item.w || st.srcW, item.h || st.srcH);
+    if (spk.item !== item) Object.assign(spk, { item, half: null, luma: null, colourKey: '', det: null, detKey: '' });
+    if (!spk.half) {
+      const bmp = await decodePhoto(item.file, item.info, { maxEdge: Math.ceil(maxdim / 2) });
+      const c = new OffscreenCanvas(bmp.width, bmp.height);
+      const g = c.getContext('2d', { willReadFrequently: true });
+      g.drawImage(bmp, 0, 0);
+      bmp.close?.();
+      spk.half = { data: g.getImageData(0, 0, c.width, c.height).data, w: c.width, h: c.height };
+    }
+    if (st.cur !== item) return;
+    const settings = buildSettings(st.auto, item.user);
+    const colourKey = Array.from(settings, (x) => x.toFixed(5)).join();
+    const { data, w, h } = spk.half;
+    const pool = await getPool();
+    if (colourKey !== spk.colourKey) {
+      // brightness of the corrected half-size photo
+      const luma = new Uint8Array(w * h);
+      let done = false;
+      if (pool) {
+        try {
+          await pool.run({
+            settings, thumb: st.thumb, tw: st.tw, th: st.th, w, h, luma: 'full',
+            band: Math.max(16, Math.floor((1 << 20) / (w * 4))),
+            read: (y, rows) => new ImageData(data.slice(y * w * 4, (y + rows) * w * 4), w, rows),
+            write: (_, y, l) => luma.set(l, y * w),
+          });
+          done = true;
+        } catch (e) { console.warn('[reefhue] speck search in workers failed', e); }
+      }
+      if (!done) {
+        const px = data.slice();
+        st.eng.begin(settings, st.thumb, st.tw, st.th);
+        st.eng.rows(px, w, h, 0, h);
+        luma.set(st.eng.luma(px));
+      }
+      Object.assign(spk, { luma, colourKey, detKey: '' });
+    }
+    const detKey = `${colourKey}|${item.user.backscatter}`;
+    if (detKey !== spk.detKey && st.cur === item) {
+      spk.det = await detectSpecks({ eng: st.eng, pool, l2: spk.luma, w2: w, h2: h, maxdim, user: item.user });
+      spk.detKey = detKey;
+    }
+    if (st.cur === item) { requestRender(); syncSpeckUI(); }
+  } catch (e) {
+    console.warn('[reefhue] backscatter preview failed', e);
+  } finally {
+    spk.busy = false;
+    if (spk.again) { spk.again = false; scheduleSpecks(0); }
+  }
 }
 
 let metricsTimer = 0;
@@ -819,6 +942,7 @@ async function loadImage(item) {
   reanalyze();
   render();
   setFileLabel();
+  scheduleSpecks(0);
 }
 
 function stopVideo() {
@@ -877,6 +1001,7 @@ async function loadVideo(item) {
   setMuted(true);
   updateTime();
   setFileLabel();
+  syncSpeckUI();
 }
 
 function relayout() {

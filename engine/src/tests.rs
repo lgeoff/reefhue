@@ -176,3 +176,57 @@ fn metrics_detect_cast() {
     assert_eq!(hist_total as usize, w * h);
 }
 
+
+/// Backscatter removal on a real photo: `BS_IN=photo.rgba BS_W=.. BS_H=.. cargo test --release bs_photo -- --ignored --nocapture`
+/// (raw RGBA in, `<BS_IN>.out` written). Prints timings per stage.
+#[test]
+#[ignore]
+fn bs_photo() {
+    use crate::despeck::*;
+    use std::time::Instant;
+    let path = std::env::var("BS_IN").unwrap();
+    let w: usize = std::env::var("BS_W").unwrap().parse().unwrap();
+    let h: usize = std::env::var("BS_H").unwrap().parse().unwrap();
+    let sens: f32 = std::env::var("BS_SENS").ok().map(|s| s.parse().unwrap()).unwrap_or(0.6);
+    let mut img = std::fs::read(&path).unwrap();
+    assert_eq!(img.len(), w * h * 4);
+    let maxdim = w.max(h) as f32;
+    let (w2, h2) = ((w + 1) / 2, (h + 1) / 2);
+    let t0 = Instant::now();
+    let mut l2 = vec![0u8; w2 * h2];
+    unsafe { bs_luma_half(img.as_ptr(), w as u32, h as u32, l2.as_mut_ptr()) };
+    let t_luma = t0.elapsed();
+    let t = Instant::now();
+    let mut mask2 = vec![0u8; w2 * h2];
+    let mut scratch = vec![0u32; bs_detect_scratch(w2 as u32, h2 as u32) as usize / 4 + 1];
+    let mut blobs = vec![0f32; 3 * 20000];
+    let n = unsafe { bs_detect(l2.as_ptr(), w2 as u32, h2 as u32, maxdim, sens, mask2.as_mut_ptr(), scratch.as_mut_ptr() as *mut u8, blobs.as_mut_ptr(), 20000) };
+    let t_detect = t.elapsed();
+    // fill in bands with a margin, like the workers do
+    let t = Instant::now();
+    let margin = bs_margin(maxdim) as usize;
+    let band = 512usize;
+    let mut fs = vec![0u32; bs_fill_scratch() as usize / 4 + 1];
+    let src = img.clone();
+    let mut masked = 0usize;
+    let mut y = 0;
+    while y < h {
+        let core = band.min(h - y);
+        let a = y.saturating_sub(margin) & !1; // even, so it lines up with the half-res mask
+        let b = (y + core + margin).min(h);
+        let rows = b - a;
+        let mut buf = src[a * w * 4..b * w * 4].to_vec();
+        let mut m = vec![0u8; w * rows];
+        let (ya2, yb2) = (a / 2, (b + 1) / 2);
+        unsafe {
+            bs_expand(mask2[ya2 * w2..yb2 * w2].as_ptr(), w2 as u32, (yb2 - ya2) as u32, ya2 as u32, m.as_mut_ptr(), w as u32, rows as u32, a as u32, 2.0);
+            bs_fill(buf.as_mut_ptr(), w as u32, rows as u32, m.as_mut_ptr(), (y - a) as u32, (y - a + core) as u32, fs.as_mut_ptr() as *mut u8);
+        }
+        masked += m[(y - a) * w..(y - a + core) * w].iter().filter(|&&v| v != 0).count();
+        img[y * w * 4..(y + core) * w * 4].copy_from_slice(&buf[(y - a) * w * 4..(y - a + core) * w * 4]);
+        y += core;
+    }
+    let t_fill = t.elapsed();
+    std::fs::write(format!("{path}.out"), &img).unwrap();
+    println!("{w}x{h}: {n} specks, {:.3}% of pixels changed | luma {t_luma:?} detect {t_detect:?} fill {t_fill:?} total {:?}", masked as f64 * 100.0 / (w * h) as f64, t0.elapsed());
+}

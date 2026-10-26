@@ -120,6 +120,76 @@ export class Engine {
     return { params, tone: f.slice(tp, tp + TONE_N), grid: f.slice(gp, gp + gw * gh), gw, gh };
   }
 
+  // ------------------------------------------------------- backscatter
+
+  /** Scratch memory after the two image buffers. */
+  _extra(bytes) {
+    const p = (this.pA + this.capacity * 2 + 15) & ~15;
+    const end = p + bytes;
+    const have = this.mem.buffer.byteLength;
+    if (end > have) this.mem.grow(Math.ceil((end - have) / 65536));
+    return p;
+  }
+
+  /** Rows of margin a band needs around it when filling specks. */
+  specksMargin(maxdim) { return this.x.bs_margin(maxdim); }
+
+  /** Brightness of RGBA rows at half resolution (ceil(w/2) × ceil(rows/2) bytes). */
+  lumaHalf(rgba, w, rows) {
+    this._reserve(rgba.length);
+    this.u8.set(rgba, this.pA);
+    this.x.bs_luma_half(this.pA, w, rows, this.pB);
+    return this.u8.slice(this.pB, this.pB + ((w + 1) >> 1) * ((rows + 1) >> 1));
+  }
+
+  /** Brightness of RGBA pixels, one byte each. */
+  luma(rgba) {
+    const n = rgba.length >> 2;
+    this._reserve(rgba.length);
+    this.u8.set(rgba, this.pA);
+    this.x.bs_luma(this.pA, n, this.pB);
+    return this.u8.slice(this.pB, this.pB + n);
+  }
+
+  /**
+   * Find backscatter specks in the half-resolution brightness `l2` of a photo
+   * whose long side is `maxdim`. `sens` 0..1. Returns the half-resolution
+   * mask (2 = speck) and [x, y, radius] triples in half-resolution pixels.
+   */
+  detectSpecks(l2, w2, h2, maxdim, sens, maxBlobs = 20000) {
+    const n2 = w2 * h2;
+    this._reserve(n2);
+    const scratch = this.x.bs_detect_scratch(w2, h2);
+    const ps = this._extra(scratch + maxBlobs * 12 + 32);
+    const pb = (ps + scratch + 15) & ~15;
+    this.u8.set(l2, this.pA);
+    const count = this.x.bs_detect(this.pA, w2, h2, maxdim, sens, this.pB, ps, pb, maxBlobs);
+    return {
+      mask: this.u8.slice(this.pB, this.pB + n2),
+      blobs: this.f32.slice(pb / 4, pb / 4 + Math.min(count, maxBlobs) * 3),
+      count,
+    };
+  }
+
+  /**
+   * Fill the specks of half-resolution mask rows `mask2` (`w2`×`h2`, first
+   * row `y2`) in `rgba` (`w`×`rows`, its row 0 being row `oy` of an image
+   * `sp` times the mask's size). Only rows `yLo`..`yHi` of `rgba` change.
+   */
+  fillSpecks(rgba, w, rows, mask2, w2, h2, y2, oy, sp, yLo = 0, yHi = rows) {
+    const n = w * rows * 4;
+    this._reserve(n);
+    const fill = this.x.bs_fill_scratch();
+    const pm = this._extra(mask2.length + fill + 32);
+    const ps = (pm + mask2.length + 15) & ~15;
+    this.u8.set(rgba, this.pA);
+    this.u8.set(mask2, pm);
+    this.x.bs_expand(pm, w2, h2, y2, this.pB, w, rows, oy, sp);
+    this.x.bs_fill(this.pA, w, rows, this.pB, yLo, yHi, ps);
+    rgba.set(this.u8.subarray(this.pA, this.pA + n));
+    return rgba;
+  }
+
   /** Quality metrics; samples ~`samples` pixels. */
   metrics(rgba, w, h, samples = 120000) {
     const n = w * h;
@@ -183,7 +253,7 @@ export function smoothAuto(raw, t, state, tau = 0.7) {
 export const DEFAULTS = {
   strength: 100, red: 100, balance: 100, dehaze: 100, exposure: 0, contrast: 10,
   shadows: 10, highlights: -10, saturation: 10, vibrance: 20, clarity: 20, water: 0,
-  temp: 0, tint: 0, waterHue: 0, waterLum: 0,
+  temp: 0, tint: 0, waterHue: 0, waterLum: 0, backscatter: 0,
 };
 
 export const PRESETS = {

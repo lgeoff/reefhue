@@ -1,7 +1,7 @@
 // A pool of workers, each with its own copy of the engine, so big photos are
-// processed on every CPU core. Bands of rows are handed out as workers free
-// up and their pixel buffers are transferred, not copied. The result is
-// identical to processing on one core (same settings, same thumbnail grid).
+// processed on every CPU core. Work goes through one queue: whichever worker
+// is free takes the next task. Pixel buffers are transferred, not copied.
+// Results are identical to processing on one core.
 // Where workers can't start (single-file build, old browsers) callers fall
 // back to the main thread.
 
@@ -41,46 +41,82 @@ export function getPool() {
 
 let nextJob = 1;
 class Pool {
-  constructor(workers) { this.workers = workers.map((w) => ({ w, job: -1 })); this.size = workers.length; }
+  constructor(workers) {
+    this.slots = workers.map((w) => ({ w, task: null, job: -1 }));
+    this.size = workers.length;
+    this.queue = [];
+    for (const s of this.slots) {
+      s.w.onmessage = ({ data }) => this._done(s, data);
+      // a worker that dies (e.g. out of memory) fails its task instead of stalling it
+      s.w.onerror = (e) => { e.preventDefault?.(); this._done(s, { type: 'error', error: e.message || 'worker crashed' }); s.job = -1; };
+    }
+  }
 
   /**
-   * Process an image band by band.
-   * read(y, rows) -> ImageData, write(imageData, y): run on this thread.
+   * Queue one message for the next free worker; resolves with its reply.
+   * `init` ({job, data}) is merged into the message when that worker hasn't
+   * seen `job` yet (settings for a run of bands).
    */
-  run({ settings, thumb, tw, th, w, h, band, read, write, onProgress }) {
+  submit(msg, transfer = [], init = null) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ msg, transfer, init, resolve, reject });
+      this._pump();
+    });
+  }
+
+  _pump() {
+    for (const s of this.slots) {
+      if (s.task || !this.queue.length) continue;
+      const t = this.queue.shift();
+      s.task = t;
+      let m = t.msg;
+      if (t.init && s.job !== t.init.job) { m = { ...m, ...t.init.data }; s.job = t.init.job; }
+      try { s.w.postMessage(m, t.transfer); } catch (e) { s.task = null; t.reject(e); }
+    }
+  }
+
+  _done(s, data) {
+    const t = s.task;
+    s.task = null;
+    if (t) {
+      if (data.type === 'error') { s.job = -1; t.reject(new Error(data.error)); } else t.resolve(data);
+    }
+    this._pump();
+  }
+
+  /**
+   * Colour-correct an image band by band. read(y, rows) -> ImageData and
+   * write(imageData, y, brightness) run on this thread. `luma` ('half' or
+   * 'full') also returns each band's brightness for backscatter detection;
+   * bands then have an even number of rows.
+   */
+  async run({ settings, thumb, tw, th, w, h, band, read, write, onProgress, luma = null }) {
     const job = nextJob++;
+    const init = { job, data: { settings, thumb, tw, th } };
+    if (luma === 'half') band += band & 1;
     const bands = [];
     for (let y = 0; y < h; y += band) bands.push([y, Math.min(band, h - y)]);
-    let next = 0, done = 0, failed = null;
-    return new Promise((resolve, reject) => {
-      const feed = (slot) => {
-        if (failed) return;
-        if (next >= bands.length) return;
-        const [y0, rows] = bands[next++];
-        const img = read(y0, rows);
-        const first = slot.job !== job;
-        slot.job = job;
-        const id = `${job}:${y0}`;
-        slot.w.onmessage = ({ data }) => {
-          if (failed) return; // a band failed elsewhere: ignore late results
-          if (data.type === 'error') { failed = new Error(data.error); slot.job = -1; reject(failed); return; }
-          try {
-            write(new ImageData(new Uint8ClampedArray(data.buf), w, rows), y0);
-            this.engineMs = (this.engineMs || 0) + (data.ms || 0);
-            done++; // not inside onProgress?.(): that would skip the count when there's no callback
+    let next = 0, done = 0, failed = false, inflight = 0;
+    await new Promise((resolve, reject) => {
+      const feed = () => {
+        // a few bands per worker in flight: enough to keep them busy, little memory
+        while (!failed && next < bands.length && inflight < this.size * 2) {
+          const [y0, rows] = bands[next++];
+          let img;
+          try { img = read(y0, rows); } catch (e) { failed = true; reject(e); return; }
+          inflight++;
+          this.submit({ type: 'rows', job, buf: img.data.buffer, w, rows, y0, fullH: h, luma }, [img.data.buffer], init).then((d) => {
+            inflight--;
+            if (failed) return;
+            this.engineMs = (this.engineMs || 0) + (d.ms || 0);
+            write(new ImageData(new Uint8ClampedArray(d.buf), w, rows), y0, d.l ? new Uint8Array(d.l) : null);
+            done++;
             onProgress?.(done / bands.length);
-            if (done === bands.length) resolve();
-            else feed(slot);
-          } catch (e) { failed = e; reject(e); }
-        };
-        const buf = img.data.buffer;
-        slot.w.postMessage({ type: 'rows', job, id, buf, w, rows, y0, fullH: h, ...(first ? { settings, thumb, tw, th } : {}) }, [buf]);
+            if (done === bands.length) resolve(); else feed();
+          }).catch((e) => { inflight--; if (!failed) { failed = true; reject(e); } });
+        }
       };
-      for (const slot of this.workers) {
-        // a worker that dies (e.g. out of memory) fails the job instead of stalling it
-        slot.w.onerror = (e) => { if (!failed) { failed = new Error(e.message || 'worker crashed'); reject(failed); } };
-        try { feed(slot); } catch (e) { failed = e; reject(e); return; }
-      }
+      feed();
     });
   }
 }
