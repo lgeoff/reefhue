@@ -13,6 +13,7 @@ import { buildSettings, smoothAuto } from './engine.js';
 import { openMp4, SampleReader, Mp4Writer, mp4aEntry, opusEntry } from './mp4.js';
 import { WebMWriter, pickVideoCodec, encodeAudioTrack } from './webm.js';
 import { loadPhotoFile, decodeForExport } from './image.js';
+import { getPool } from './pool.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const even = (x) => Math.max(2, Math.round(x / 2) * 2);
@@ -477,18 +478,35 @@ export async function exportImage({ file, info, eng, user, locked, format = 'jpe
   const tc = new OffscreenCanvas(tw, th);
   const tg = tc.getContext('2d', { willReadFrequently: true });
   tg.drawImage(bitmap, 0, 0, tw, th);
-  bitmap.close?.();
   const thumb = tg.getImageData(0, 0, tw, th).data;
   const a = locked || { data: thumb, w: tw, h: th };
   const auto = eng.analyze(a.data, a.w, a.h, user.red / 100, user.balance / 100);
-  eng.begin(buildSettings(auto, user), thumb, tw, th);
-  const strip = Math.max(16, Math.floor((4 << 20) / (w * 4))); // ~4 MB per strip
-  for (let y = 0; y < h; y += strip) {
-    const rows = Math.min(strip, h - y);
-    const img = g.getImageData(0, y, w, rows);
-    eng.rows(img.data, w, rows, y, h);
-    g.putImageData(img, 0, y);
+  const settings = buildSettings(auto, user);
+  // every CPU core when workers are available, otherwise this thread
+  const pool = await getPool();
+  let cores = 0;
+  if (pool) {
+    try {
+      const band = Math.max(16, Math.floor((1 << 20) / (w * 4))); // ~1 MB bands spread well over cores
+      await pool.run({ settings, thumb, tw, th, w, h, band, read: (y, rows) => g.getImageData(0, y, w, rows), write: (img, y) => g.putImageData(img, 0, y) });
+      cores = pool.size;
+    } catch (e) {
+      console.warn('[reefhue] parallel processing failed, using one core', e);
+      g.drawImage(bitmap, 0, 0); // start again from the original pixels
+    }
   }
+  if (!cores) {
+    eng.begin(settings, thumb, tw, th);
+    const strip = Math.max(16, Math.floor((4 << 20) / (w * 4))); // ~4 MB per strip
+    for (let y = 0; y < h; y += strip) {
+      const rows = Math.min(strip, h - y);
+      const img = g.getImageData(0, y, w, rows);
+      eng.rows(img.data, w, rows, y, h);
+      g.putImageData(img, 0, y);
+    }
+    cores = 1;
+  }
+  bitmap.close?.();
   const blob = await c.convertToBlob({ type: `image/${format}`, quality: 0.95 });
-  return { blob, ext: format === 'jpeg' ? 'jpg' : format, info: { width: w, height: h, scaled } };
+  return { blob, ext: format === 'jpeg' ? 'jpg' : format, info: { width: w, height: h, scaled, cores } };
 }

@@ -9,6 +9,7 @@ for p in site.glob('*.js'):
     s = p.read_text()
     s = re.sub(r"""(from\s+|import\(\s*)(['"])(\./[\w.-]+\.js)\2""", lambda m: f'{m[1]}{m[2]}{m[3]}{q}{m[2]}', s)
     s = s.replace("new URL('engine.wasm', import.meta.url)", f"new URL('engine.wasm{q}', import.meta.url)")
+    s = s.replace("new URL('./worker.js', import.meta.url)", f"new URL('./worker.js{q}', import.meta.url)")
     p.write_text(s)
 idx = site / 'index.html'
 s = idx.read_text()

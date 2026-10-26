@@ -14,7 +14,7 @@ import re
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB = os.path.join(ROOT, "web")
 DIST = os.path.join(ROOT, "dist")
-MODULES = ["engine.js", "webm.js", "mp4.js", "ts.js", "gpu.js", "zip.js", "pick.js", "formats.js", "heic.js", "image.js", "pipeline.js", "demo.js", "tour.js", "app.js"]  # dependency order
+MODULES = ["engine.js", "webm.js", "mp4.js", "ts.js", "gpu.js", "zip.js", "pool.js", "pick.js", "formats.js", "heic.js", "image.js", "pipeline.js", "demo.js", "tour.js", "app.js"]  # dependency order
 
 
 def read(name):
@@ -42,7 +42,7 @@ def main():
     js = "".join(wrap_module(m, read(m)) for m in MODULES)
     # demo.js dynamic import in tests only; app uses static imports
     js = js.replace("new URL('engine.wasm', import.meta.url)", "'engine.wasm'")
-    scripts = f"<script>window.REEFHUE_WASM_B64 = \"{wasm}\";</script>\n<script type=\"module\">\n{js}</script>"
+    scripts = f"<script>window.REEFHUE_WASM_B64 = \"{wasm}\"; window.REEFHUE_NO_WORKERS = true; /* one file: no worker script to load */</script>\n<script type=\"module\">\n{js}</script>"
 
     # single-file builds: the logo goes inline, the PNG/manifest links are dropped
     logo = "data:image/svg+xml;base64," + base64.b64encode(open(os.path.join(WEB, "logo.svg"), "rb").read()).decode()
