@@ -57,9 +57,12 @@ const first = await state();
 console.log('first pick:', JSON.stringify(first));
 await page.screenshot({ path: join(dir, 'first-pick.png') });
 
-// 3. the user taps "Pick it again" and chooses the same photo
-[chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#stageMsg label[for=fileInput]')]);
-await chooser.setFiles(picked);
+// 3. if it was refused, the user taps "Pick again" and chooses the same photo
+// (since reads start at pick time, the app usually gets the bytes first time)
+if (first.pickAgain) {
+  [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#stageMsg label[for=fileInput]')]);
+  await chooser.setFiles(picked);
+}
 await page.waitForFunction(() => { const c = window.reefhue.cur; return c?.info && window.reefhue.srcW === c.info.w && !window.reefhue.items.some((i) => i.status === 'error'); }, null, { timeout: 20000 }).catch(() => {});
 await page.waitForTimeout(500);
 const second = await state();
@@ -74,20 +77,23 @@ await page.evaluate(() => { let r; window.__gate = new Promise((x) => { r = x; }
 await chooser.setFiles(batch);
 for (const p of batch) appendFileSync(p, Buffer.alloc(16));
 await page.evaluate(() => window.__release());
-await page.waitForFunction(() => window.reefhue.items.filter((i) => i.status === 'error').length === 2, null, { timeout: 20000 }).catch(() => {});
+await page.waitForFunction(() => window.reefhue.items.length === 3 && window.reefhue.items.every((i) => i.status === 'error' || i.info), null, { timeout: 20000 }).catch(() => {});
 await page.waitForTimeout(500);
 const third = await state();
 third.text = await page.textContent('#stageMsgText');
 console.log('batch pick:', JSON.stringify(third));
 await page.screenshot({ path: join(dir, 'batch-pick.png') });
-[chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#stageMsg label[for=fileInput]')]);
-await chooser.setFiles(batch);
+if (third.pickAgain) {
+  [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#stageMsg label[for=fileInput]')]);
+  await chooser.setFiles(batch);
+}
 await page.waitForFunction(() => window.reefhue.items.length === 3 && window.reefhue.items.every((i) => i.info) && window.reefhue.srcW === window.reefhue.cur.info.w, null, { timeout: 20000 }).catch(() => {});
 const fourth = await state();
 console.log('batch picked again:', JSON.stringify(fourth));
 
-const ok = first.pickAgain && second.items.length === 1 && second.items[0].endsWith(':ready') && !second.pickAgain
-  && third.pickAgain && /these 2 photos/.test(third.text) && fourth.items.length === 3 && fourth.items.every((i) => i.endsWith(':ready')) && !fourth.pickAgain;
+console.log(`first pick ${first.pickAgain ? 'refused, recovered by picking again' : 'worked directly'}; batch ${third.pickAgain ? 'refused, recovered by picking again' : 'worked directly'}`);
+const ok = second.items.length === 1 && second.items[0].endsWith(':ready') && !second.pickAgain
+  && (!third.pickAgain || /these 2 photos/.test(third.text)) && fourth.items.length === 3 && fourth.items.every((i) => i.endsWith(':ready')) && !fourth.pickAgain;
 console.log(ok ? 'PASS' : 'FAIL', `· page errors: ${errors.length ? errors.join(' | ') : 'none'} · screenshots in ${dir}`);
 await browser.close();
 process.exit(ok ? 0 : 1);

@@ -2320,11 +2320,31 @@ async function clearPicked() {
 }
 
 let seq = 0;
-async function copy(file, type, name) {
-  const dir = await pickedDir();
-  const handle = await dir.getFileHandle(`${Date.now()}-${++seq}`, { create: true });
-  const writable = await handle.createWritable();
-  await file.stream().pipeTo(writable);
+/**
+ * Copy a picked file into private storage. `reader` was created in the pick
+ * handler and its first read already requested, so the file is opened at
+ * pick time even though setting up storage takes a moment.
+ */
+async function copy(reader, first, type, name) {
+  let handle, writable;
+  try {
+    const dir = await pickedDir();
+    handle = await dir.getFileHandle(`${Date.now()}-${++seq}`, { create: true });
+    writable = await handle.createWritable();
+  } catch (e) {
+    // no private storage here: keep the bytes in memory instead
+    console.warn('private storage unavailable, keeping', name, 'in memory', e?.name || e);
+    const parts = [];
+    for (let chunk = await first; !chunk.done; chunk = await reader.read()) parts.push(chunk.value);
+    return new File(parts, name, { type });
+  }
+  try {
+    for (let chunk = await first; !chunk.done; chunk = await reader.read()) await writable.write(chunk.value);
+    await writable.close();
+  } catch (e) {
+    await writable.abort().catch(() => {});
+    throw e;
+  }
   const f = await handle.getFile();
   return new File([f], name, { type });
 }
@@ -2332,23 +2352,24 @@ async function copy(file, type, name) {
 /**
  * Call synchronously in the change/drop handler, before touching the files.
  * Only name and type are read here: they don't trigger Chrome's checks.
+ * Every file starts reading right now, all at once.
  */
 function takeFiles(files) {
   if (!ANDROID) return;
+  const opfs = !!navigator.storage?.getDirectory && 'createWritable' in (globalThis.FileSystemFileHandle?.prototype || {});
   for (const f of files) {
     const name = f.name, type = f.type;
     let p;
-    if (navigator.storage?.getDirectory && 'createWritable' in (globalThis.FileSystemFileHandle?.prototype || {})) {
-      p = copy(f, type, name).catch(async (e) => {
-        // no OPFS writes: hold the bytes in memory instead
-        console.warn('copy to private storage failed, reading into memory', name, e?.name || e);
-        return new File([await f.arrayBuffer()], name, { type });
-      });
+    if (opfs) {
+      const reader = f.stream().getReader();
+      const first = reader.read(); // opens the file now
+      first.catch(() => {});
+      p = copy(reader, first, type, name);
     } else {
       p = f.arrayBuffer().then((b) => new File([b], name, { type }));
     }
     early.set(f, p);
-    p.catch(() => {});
+    p.catch((e) => console.warn('could not copy', name, e?.name || e));
   }
 }
 

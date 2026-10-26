@@ -102,6 +102,7 @@ python3 tools/bundle.py                    # writes dist/reefhue.html (+ artifac
 
 - `tests/make-formats.sh <dir> <photo.jpg>` then `node tests/formats.mjs <url> <out> <files>` opens and exports every supported format (transport streams, MKV, 3GP, RAW layouts, TIFF variants, a tiled rotated HEIC).
 - `python3 tests/fps-check.py src.mp4=src-reefhue.mp4 …` compares frame counts, frame rates and every frame timestamp between sources and exports (checked at 23.976, 25, 29.97, 50, 59.94, 60, 120 fps, variable frame rate, MKV, WebM, MTS and TS: identical).
+- `node tests/android-multi-sim.mjs <url> <photo.jpg> [count]` picks several photos at once with slow private storage and files that change 300 ms after the pick (all must open).
 - `node tests/android-sim.mjs <url> <photo.jpg>` reproduces the Android photo-picker failure (the photo changes between picking and reading, so Chrome throws NotReadableError) in Pixel 7 emulation, and checks the pick-again recovery.
 
 ```sh
