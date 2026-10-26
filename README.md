@@ -141,3 +141,13 @@ tools/bundle.py         single-file bundler
 - Videos the browser cannot decode (for example HEVC/H.265 in Chrome without hardware support) are flagged in the batch and skipped.
 - 10-bit/HDR footage is exported as 8-bit SDR.
 - HEIC and RAW photos are not supported by browsers; export to JPEG first. EXIF metadata is not copied.
+
+## License
+
+Reefhue is free to use, copy, change and share for **non-commercial purposes**, under the [PolyForm Noncommercial License 1.0.0](LICENSE). Personal use, hobby projects, research, teaching, and use by charities and public institutions are all allowed. Any commercial use, including selling it, offering it as part of a paid product or service, or using it inside a company for business purposes, needs a separate licence from the author: open an issue to ask.
+
+Keep the `Required Notice:` line from [LICENSE](LICENSE) with any copy you share.
+
+Versions published before this licence change were released under the MIT License and stay available under it.
+
+Third-party material: the GitHub mark in the header comes from [Octicons](https://github.com/primer/octicons) (MIT License, GitHub Inc.). The Barlow and Barlow Condensed fonts are loaded from Google Fonts (SIL Open Font License).

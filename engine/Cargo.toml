@@ -3,7 +3,7 @@ name = "reefhue-engine"
 version = "0.1.0"
 edition = "2021"
 description = "Underwater colour-restoration engine (no_std, no dependencies) compiled to WebAssembly"
-license = "MIT"
+license = "PolyForm-Noncommercial-1.0.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
