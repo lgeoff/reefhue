@@ -1,0 +1,28 @@
+name: iOS picker test
+on:
+  push:
+    branches: [ios-ci]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build site
+        run: sh tools/build-site.sh
+      - name: Run in the iOS Simulator
+        run: bash tests/ios/run.sh
+      - name: Publish results to a branch
+        if: always()
+        run: |
+          mkdir -p out && cp -r out /tmp/results && cd /tmp/results
+          git init -q && git checkout -q -b r
+          git config user.name ci && git config user.email ci@example.com
+          git add -A && git commit -qm "ios results ${{ github.sha }}" || true
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" r:refs/heads/ios-results
