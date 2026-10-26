@@ -219,7 +219,7 @@ function fitStage() {
   if (!st.srcW) return { w: 0, h: 0 };
   const wrapEl = $('stageWrap');
   const narrow = window.innerWidth <= 900;
-  const pad = narrow ? 12 : 24;
+  const pad = narrow ? 0 : 24; // phones: edge to edge
   if (narrow) {
     // pinned on top while scrolling the settings, so keep it to ~40% of the screen
     const w = wrapEl.clientWidth - pad;
@@ -1308,8 +1308,8 @@ function bindInputs() {
     st.cur.locked = e.target.checked ? { data: st.thumb.slice(), w: st.tw, h: st.th } : null;
     reanalyze(); requestRender(); itemEdited(st.cur);
   });
-  $('demoPhotoBtn').onclick = () => loadDemoPhoto(true);
-  $('demoClipBtn').onclick = async () => {
+  // demo clip for tests and the console (no button in the UI)
+  window.reefhueDemoClip = async () => {
     try {
       busy('Rendering a demo clip in the browser…', 0);
       const clip = await demoClip((f) => busy('Rendering a demo clip in the browser…', f));

@@ -75,7 +75,7 @@ await one.saveAs(`${shots}/${one.suggestedFilename()}`);
 log('single', one.suggestedFilename());
 
 // ---- demo clip joins the batch
-await page.click('#demoClipBtn');
+await page.evaluate(() => { window.reefhueDemoClip(); });
 await page.waitForFunction(() => window.reefhue.items.length === 5 && window.reefhue.cur?.name.startsWith('demo-reef-clip') && window.reefhue.kind === 'video', null, { timeout: 120000 });
 log('demo clip', await page.evaluate(() => window.reefhue.cur.name));
 

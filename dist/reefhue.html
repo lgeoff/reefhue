@@ -36,6 +36,7 @@
 [hidden] { display: none !important; }
 html, body { height: 100%; }
 body {
+  margin: 0;
   background: var(--ground);
   color: var(--ink);
   font: 400 14px/1.45 var(--font-body);
@@ -69,10 +70,11 @@ h2 {
 .mark { width: 32px; height: 32px; align-self: center; flex: none; display: block; }
 .name { font: 600 24px/1 var(--font-display); letter-spacing: 0.02em; }
 .sub { color: var(--muted); font-size: 13px; }
-.file { flex: 1 1 200px; min-width: 0; display: flex; gap: 10px; align-items: baseline; justify-content: center; }
+.file { flex: 1 1 160px; min-width: 0; display: flex; gap: 10px; align-items: baseline; justify-content: flex-end; }
 .file-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .file-meta { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.actions { display: flex; gap: 8px; }
+.actions { display: flex; gap: 8px; margin-left: auto; }
+.icon-btn svg { flex: none; }
 
 .btn {
   display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
@@ -102,7 +104,6 @@ h2 {
 }
 .hint { color: var(--muted); font-size: 12px; }
 kbd { font: 600 11px var(--font-body); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; }
-.demo-links { margin-left: auto; display: flex; gap: 12px; font-size: 13px; }
 
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
 .seg button { background: transparent; border: 0; padding: 5px 12px; cursor: pointer; color: var(--muted); }
@@ -349,6 +350,20 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
   .transport .time { font-size: 11.5px; }
   .readout { grid-template-columns: 110px minmax(0, 1fr); }
   .readout .metrics { grid-column: 1 / -1; }
+  /* compact header: logo and name on the left, icon buttons on the right */
+  .bar { flex-wrap: nowrap; gap: 8px; padding-block: 8px; }
+  .name { font-size: 21px; }
+  .mark { width: 28px; height: 28px; }
+  .btn-label { display: none; }
+  .icon-btn, .help-btn { padding: 8px 10px; }
+  #exportBtn { padding: 8px 12px; }
+  /* the preview spans the whole width, compare buttons right on top of it */
+  .toolbar { padding: 6px 8px; gap: 8px; flex-wrap: nowrap; border-bottom: 0; }
+  .seg button { padding: 5px 10px; }
+  .file { flex: 1 1 0; }
+  .file-name { font-size: 13px; }
+  .stage-wrap { background: var(--ground); }
+  .stage { box-shadow: none; }
   .inspector { overflow: visible; }
   .sub, .hint { display: none; }
 }
@@ -405,6 +420,20 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
 .stage-msg p { margin: 0; max-width: 38ch; }
 .stage-msg-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
 .q-thumb-empty { display: grid; place-items: center; background: var(--raise); color: var(--muted); font-size: 20px; }
+
+/* ---------------------------------------------------------------- advanced */
+.advanced { border-top: 1px solid var(--line); }
+.advanced > summary {
+  cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 10px;
+  padding: 10px max(16px, env(safe-area-inset-left, 0px));
+  font: 600 13px/1 var(--font-display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+}
+.advanced > summary::-webkit-details-marker { display: none; }
+.advanced > summary::before { content: "▸"; font-size: 11px; transition: transform 0.15s; }
+.advanced[open] > summary::before { transform: rotate(90deg); }
+.advanced > summary span { font: 400 12px var(--font-body); letter-spacing: 0; text-transform: none; }
+.advanced > summary:hover { color: var(--ink); }
+@media (max-width: 900px) { .advanced > summary span { display: none; } }
 </style>
 </head>
 <body>
@@ -414,13 +443,9 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
     <span class="name">Reefhue</span>
     <span class="sub">Underwater colour restore · runs on your machine</span>
   </div>
-  <div class="file" aria-live="polite">
-    <span id="fileName" class="file-name">Loading engine…</span>
-    <span id="fileMeta" class="file-meta"></span>
-  </div>
   <div class="actions">
     <button type="button" id="helpBtn" class="btn ghost help-btn" aria-label="Help: take a guided tour"><span aria-hidden="true">?</span><span class="help-label">Help</span></button>
-    <label class="btn" id="addBtn" for="fileInput">Add photos or videos</label>
+    <label class="btn icon-btn" id="addBtn" for="fileInput" aria-label="Add photos or videos" title="Add photos or videos"><svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18"><path d="M10 3.5v13M3.5 10h13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span class="btn-label">Add photos or videos</span></label>
     <!-- Only MIME types here: Chrome on Android uses its photo picker only when every
          accepted type is image/* or video/*. Extensions such as .mov send it to the
          generic Android chooser, whose gallery hand-over fails on first pick. -->
@@ -456,6 +481,7 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
   </aside>
 
   <section class="viewer" aria-label="Preview">
+    <div class="preview-pane" id="previewPane">
     <div class="toolbar">
       <div class="seg" role="group" aria-label="Compare">
         <button type="button" id="viewSplit" class="on" aria-pressed="true">Split</button>
@@ -463,13 +489,11 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
         <button type="button" id="viewBefore" aria-pressed="false">Before</button>
       </div>
       <span class="hint">Hold <kbd>B</kbd> to see the original · drag the divider</span>
-      <div class="demo-links">
-        <button type="button" id="demoPhotoBtn" class="link">Demo photo</button>
-        <button type="button" id="demoClipBtn" class="link">Demo clip</button>
+      <div class="file" aria-live="polite">
+        <span id="fileName" class="file-name">Loading engine…</span>
+        <span id="fileMeta" class="file-meta"></span>
       </div>
     </div>
-
-    <div class="preview-pane" id="previewPane">
     <div class="stage-wrap" id="stageWrap">
       <div class="stage" id="stage">
         <canvas id="beforeCanvas" aria-label="Original"></canvas>
@@ -493,6 +517,8 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
     </div>
     </div>
 
+    <details class="advanced" id="advanced">
+    <summary>Advanced <span>colour cast, histograms and quality measures</span></summary>
     <div class="readout" id="readout">
       <figure class="cast">
         <canvas id="castPlot" width="220" height="220" aria-label="Colour cast on the a*b* plane"></canvas>
@@ -510,6 +536,7 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
         </table>
       </div>
     </div>
+    </details>
   </section>
 
   <aside class="inspector" aria-label="Adjustments">
@@ -3839,11 +3866,6 @@ const STEPS = [
     body: () => `Photos: JPEG, HEIC, RAW (using the camera’s preview), TIFF, PNG, WebP. Videos: MP4, MOV, MTS/AVCHD, MKV, WebM${touch() ? '' : '. Or drag them anywhere onto the page'}. Pick several at once to make a batch.`,
   },
   {
-    target: '.demo-links',
-    title: 'No dive footage at hand?',
-    body: 'Load a demo photo or a short demo clip to try everything out.',
-  },
-  {
     target: '#stageWrap',
     title: 'Before and after',
     body: () => `The left side is your original, the right side the restored version. Drag the divider to compare any part of the picture.${touch() ? '' : ' Hold <kbd>B</kbd> to see the whole original.'}`,
@@ -3880,9 +3902,9 @@ const STEPS = [
     body: () => `Every slider updates the preview instantly. ${narrow() ? 'On a phone the preview stays pinned at the top while you scroll the sliders.' : 'More groups below cover light, colour, water and detail.'} Double-${touch() ? 'tap' : 'click'} a slider to reset it.`,
   },
   {
-    target: '#readout',
-    title: 'Check the result',
-    body: 'The colour-cast plot shows how far the brightest parts are from neutral grey (the centre), before and after. The histograms and measures show contrast and colour range.',
+    target: '#advanced',
+    title: 'Advanced',
+    body: 'Open it to check the result: the colour-cast plot shows how far the brightest parts are from neutral grey (the centre), before and after; the histograms and measures show contrast and colour range.',
   },
   {
     target: '#queue',
@@ -4300,7 +4322,7 @@ function fitStage() {
   if (!st.srcW) return { w: 0, h: 0 };
   const wrapEl = $('stageWrap');
   const narrow = window.innerWidth <= 900;
-  const pad = narrow ? 12 : 24;
+  const pad = narrow ? 0 : 24; // phones: edge to edge
   if (narrow) {
     // pinned on top while scrolling the settings, so keep it to ~40% of the screen
     const w = wrapEl.clientWidth - pad;
@@ -5389,8 +5411,8 @@ function bindInputs() {
     st.cur.locked = e.target.checked ? { data: st.thumb.slice(), w: st.tw, h: st.th } : null;
     reanalyze(); requestRender(); itemEdited(st.cur);
   });
-  $('demoPhotoBtn').onclick = () => loadDemoPhoto(true);
-  $('demoClipBtn').onclick = async () => {
+  // demo clip for tests and the console (no button in the UI)
+  window.reefhueDemoClip = async () => {
     try {
       busy('Rendering a demo clip in the browser…', 0);
       const clip = await demoClip((f) => busy('Rendering a demo clip in the browser…', f));

@@ -22,13 +22,9 @@
     <span class="name">Reefhue</span>
     <span class="sub">Underwater colour restore · runs on your machine</span>
   </div>
-  <div class="file" aria-live="polite">
-    <span id="fileName" class="file-name">Loading engine…</span>
-    <span id="fileMeta" class="file-meta"></span>
-  </div>
   <div class="actions">
     <button type="button" id="helpBtn" class="btn ghost help-btn" aria-label="Help: take a guided tour"><span aria-hidden="true">?</span><span class="help-label">Help</span></button>
-    <label class="btn" id="addBtn" for="fileInput">Add photos or videos</label>
+    <label class="btn icon-btn" id="addBtn" for="fileInput" aria-label="Add photos or videos" title="Add photos or videos"><svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18"><path d="M10 3.5v13M3.5 10h13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span class="btn-label">Add photos or videos</span></label>
     <!-- Only MIME types here: Chrome on Android uses its photo picker only when every
          accepted type is image/* or video/*. Extensions such as .mov send it to the
          generic Android chooser, whose gallery hand-over fails on first pick. -->
@@ -64,6 +60,7 @@
   </aside>
 
   <section class="viewer" aria-label="Preview">
+    <div class="preview-pane" id="previewPane">
     <div class="toolbar">
       <div class="seg" role="group" aria-label="Compare">
         <button type="button" id="viewSplit" class="on" aria-pressed="true">Split</button>
@@ -71,13 +68,11 @@
         <button type="button" id="viewBefore" aria-pressed="false">Before</button>
       </div>
       <span class="hint">Hold <kbd>B</kbd> to see the original · drag the divider</span>
-      <div class="demo-links">
-        <button type="button" id="demoPhotoBtn" class="link">Demo photo</button>
-        <button type="button" id="demoClipBtn" class="link">Demo clip</button>
+      <div class="file" aria-live="polite">
+        <span id="fileName" class="file-name">Loading engine…</span>
+        <span id="fileMeta" class="file-meta"></span>
       </div>
     </div>
-
-    <div class="preview-pane" id="previewPane">
     <div class="stage-wrap" id="stageWrap">
       <div class="stage" id="stage">
         <canvas id="beforeCanvas" aria-label="Original"></canvas>
@@ -101,6 +96,8 @@
     </div>
     </div>
 
+    <details class="advanced" id="advanced">
+    <summary>Advanced <span>colour cast, histograms and quality measures</span></summary>
     <div class="readout" id="readout">
       <figure class="cast">
         <canvas id="castPlot" width="220" height="220" aria-label="Colour cast on the a*b* plane"></canvas>
@@ -118,6 +115,7 @@
         </table>
       </div>
     </div>
+    </details>
   </section>
 
   <aside class="inspector" aria-label="Adjustments">

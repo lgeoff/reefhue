@@ -16,11 +16,6 @@ const STEPS = [
     body: () => `Photos: JPEG, HEIC, RAW (using the camera’s preview), TIFF, PNG, WebP. Videos: MP4, MOV, MTS/AVCHD, MKV, WebM${touch() ? '' : '. Or drag them anywhere onto the page'}. Pick several at once to make a batch.`,
   },
   {
-    target: '.demo-links',
-    title: 'No dive footage at hand?',
-    body: 'Load a demo photo or a short demo clip to try everything out.',
-  },
-  {
     target: '#stageWrap',
     title: 'Before and after',
     body: () => `The left side is your original, the right side the restored version. Drag the divider to compare any part of the picture.${touch() ? '' : ' Hold <kbd>B</kbd> to see the whole original.'}`,
@@ -57,9 +52,9 @@ const STEPS = [
     body: () => `Every slider updates the preview instantly. ${narrow() ? 'On a phone the preview stays pinned at the top while you scroll the sliders.' : 'More groups below cover light, colour, water and detail.'} Double-${touch() ? 'tap' : 'click'} a slider to reset it.`,
   },
   {
-    target: '#readout',
-    title: 'Check the result',
-    body: 'The colour-cast plot shows how far the brightest parts are from neutral grey (the centre), before and after. The histograms and measures show contrast and colour range.',
+    target: '#advanced',
+    title: 'Advanced',
+    body: 'Open it to check the result: the colour-cast plot shows how far the brightest parts are from neutral grey (the centre), before and after; the histograms and measures show contrast and colour range.',
   },
   {
     target: '#queue',
