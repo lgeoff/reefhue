@@ -350,6 +350,12 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
   .file-name { font-size: 13px; }
   .stage-wrap { background: var(--ground); }
   .stage { box-shadow: none; }
+  /* touch-sized controls: remove/download in the batch list, Advanced toggle */
+  .q-main { padding-right: 52px; }
+  .q-x, .q-dl { width: 44px; height: 44px; font-size: 24px; right: 2px; background: var(--raise); }
+  .q-x { top: 2px; }
+  .q-dl { bottom: 2px; font-size: 20px; }
+
   .inspector { overflow: visible; }
   .sub, .hint { display: none; }
 }
@@ -419,4 +425,8 @@ figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
 .advanced[open] > summary::before { transform: rotate(90deg); }
 .advanced > summary span { font: 400 12px var(--font-body); letter-spacing: 0; text-transform: none; }
 .advanced > summary:hover { color: var(--ink); }
-@media (max-width: 900px) { .advanced > summary span { display: none; } }
+@media (max-width: 900px) {
+  .advanced > summary span { display: none; }
+  .advanced > summary { padding-block: 15px; font-size: 15px; gap: 12px; min-height: 48px; box-sizing: border-box; align-items: center; }
+  .advanced > summary::before { font-size: 20px; width: 22px; text-align: center; }
+}

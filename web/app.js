@@ -708,13 +708,16 @@ function updateItemEl(item) {
   li.dataset.status = item.status;
   li.setAttribute('aria-current', item === st.cur ? 'true' : 'false');
   li.innerHTML = itemHTML(item);
+  // sizes arrive after the file is read (Android copies), keep the total current
+  const total = st.items.reduce((t, i) => t + (i.size || 0), 0);
+  $('qCount').textContent = `${st.items.length} files · ${fmtMB(total)}`;
 }
 
 function syncBatchButtons() {
   const vids = st.items;
   const done = vids.filter((i) => i.status === 'done').length;
   const todo = vids.filter((i) => i.status !== 'done' && i.status !== 'processing' && !i.unplayable).length;
-  const total = vids.reduce((a, i) => a + i.size, 0);
+  const total = vids.reduce((a, i) => a + (i.size || 0), 0);
   $('qCount').textContent = `${vids.length} files · ${fmtMB(total)}`;
   const pb = $('qProcess');
   if (st.batch) { pb.textContent = 'Stop'; pb.disabled = false; pb.classList.remove('primary'); }
