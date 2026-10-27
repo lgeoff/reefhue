@@ -1,0 +1,21 @@
+2026-10-27 00:02:54:976 [8bc78b0c][XCUITest] RemoteXPC devices listing unavailable: Tunnel registry port not found. Please run the tunnel creation script first See https://appium.github.io/appium-xcuitest-driver/latest/guides/remotexpc-tunnels-real-devices/ Falling back to appium-ios-device.
+2026-10-27 00:02:58:274 [8bc78b0c][XCUITestDriver@a7d0] Reset: failed to terminate Simulator application with id "com.apple.mobilesafari"
+2026-10-27 00:05:12:618 [8bc78b0c][XCUITestDriver@a7d0] NativeSimError: Device 'E952A9B0-CC78-435C-BF08-06AD47FE1076' did not finish booting within 120000ms
+    at wrapNativeError (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/node_modules/@appium/coresim/lib/src/errors.js:79:19)
+    at runCatchingAsync (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/node_modules/@appium/coresim/lib/src/utils/run-catching.js:8:9)
+    at async SimulatorXcode15.waitForBoot (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/node_modules/appium-ios-simulator/build/lib/extensions/lifecycle.js:106:5)
+    at async SimulatorXcode15.run (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/node_modules/appium-ios-simulator/build/lib/extensions/ui-client.js:212:9)
+    at async XCUITestDriver.startSim (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/simulator.js:68:5)
+    at async XCUITestDriver.initSimulator (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/simulator.js:13:5)
+    at async XCUITestDriver.setupDevice (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/driver.js:1157:13)
+    at async XCUITestDriver.start (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/driver.js:1047:9)
+    at async XCUITestDriver.createSession (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/driver.js:758:13)
+    at async AppiumDriver.createSession (/Users/runner/hostedtoolcache/node/22.23.2/arm64/lib/node_modules/appium/build/lib/appium.js:266:44)
+    at async runCommandPromise (/Users/runner/hostedtoolcache/node/22.23.2/arm64/lib/node_modules/appium/node_modules/@appium/base-driver/build/lib/basedriver/driver.js:119:24)
+    at async AppiumDriver.executeCommand (/Users/runner/hostedtoolcache/node/22.23.2/arm64/lib/node_modules/appium/node_modules/@appium/base-driver/build/lib/basedriver/driver.js:160:15)
+    at async defaultBehavior (/Users/runner/hostedtoolcache/node/22.23.2/arm64/lib/node_modules/appium/build/lib/appium.js:575:24)
+    at async AppiumDriver.executeWrappedCommand (/Users/runner/hostedtoolcache/node/22.23.2/arm64/lib/node_modules/appium/build/lib/appium.js:683:22)
+    at async AppiumDriver.executeCommand (/Users/runner/hostedtoolcache/node/22.23.2/arm64/lib/node_modules/appium/build/lib/appium.js:591:21)
+    at async asyncHandler (/Users/runner/hostedtoolcache/node/22.23.2/arm64/lib/node_modules/appium/node_modules/@appium/base-driver/build/lib/protocol/protocol.js:393:25)
+2026-10-27 00:05:13:139 [ce3b8b46][XCUITest] RemoteXPC devices listing unavailable: Tunnel registry port not found. Please run the tunnel creation script first See https://appium.github.io/appium-xcuitest-driver/latest/guides/remotexpc-tunnels-real-devices/ Falling back to appium-ios-device.
+2026-10-27 00:08:35:539 [ce3b8b46][XCUITestDriver@6e4b] Reset: failed to terminate Simulator application with id "com.apple.mobilesafari"

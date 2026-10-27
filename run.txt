@@ -1,0 +1,44 @@
+2026-10-27T00:05:12.874Z WARN webdriver: WebDriverError: Device 'E952A9B0-CC78-435C-BF08-06AD47FE1076' did not finish booting within 120000ms when running "http://127.0.0.1:4723/session" with method "POST"
+00:12:40.519 session up
+00:12:40.521 === http://localhost:8765/ · IMG_0001.MOV · then again
+00:13:14.215 loaded {"kind":"image","cur":"demo-reef-9m.jpg","src":"1600x1067","items":[{"name":"demo-reef-9m.jpg","type":"image/jpeg","size":296103,"status":"ready","text":"Ready","kind":"image","w":1600,"dur":0,"unplayable":false}],"file":"demo-reef-9m.jpg","meta":"1600×1067","busy":"Drawing the demo reef…","toast":"New here? Tap Help for a one-minute tour.","msg":"","transport":false}
+00:14:01.008 cell Video, four seconds, October 20, 10:00 AM
+00:14:16.910 select attempt 1: Done enabled = false
+00:14:31.042 select attempt 2: Done enabled = true
+00:14:36.885 tapped Done
+00:14:38.953 +2s {"kind":"image","cur":"demo-reef-9m.jpg","src":"1600x1067","items":[{"name":"demo-reef-9m.jpg","type":"image/jpeg","size":296103,"status":"ready","text":"Ready","kind":"image","w":1600,"dur":0,"unplayable":false}],"file":"demo-reef-9m.jpg","meta":"1600×1067","busy":"Drawing the demo reef…","toast":"","msg":"","transport":false}
+00:14:51.222 +14s {"kind":"image","cur":"IMG_0001.mov","src":"1600x1067","items":[{"name":"IMG_0001.mov","type":"video/quicktime","size":7324937,"status":"ready","text":"Ready","kind":"video","w":0,"dur":0,"unplayable":false}],"file":"demo-reef-9m.jpg","meta":"1600×1067","busy":"Drawing the demo reef…","toast":"","msg":"","transport":false}
+00:14:55.695 +19s {"kind":"video","cur":"IMG_0001.mov","src":"1920x1080","items":[{"name":"IMG_0001.mov","type":"video/quicktime","size":7324937,"status":"ready","text":"Ready","kind":"video","w":1920,"dur":4,"unplayable":false}],"file":"demo-reef-9m.jpg","meta":"1600×1067","busy":"Drawing the demo reef…","toast":"","msg":"","transport":false}
+00:14:57.795 +21s {"kind":"video","cur":"IMG_0001.mov","src":"1920x1080","items":[{"name":"IMG_0001.mov","type":"video/quicktime","size":7324937,"status":"ready","text":"Ready","kind":"video","w":1920,"dur":4,"unplayable":false}],"file":"IMG_0001.mov","meta":"1920×1080 · 0:04.0 · 30 fps","busy":"Drawing the demo reef…","toast":"","msg":"","transport":true}
+00:15:46.767 no video in picker
+00:15:49.548 === http://localhost:8765/ · dive_h264.mp4
+00:15:56.151 loaded {"kind":"image","cur":"demo-reef-9m.jpg","src":"1600x1067","items":[{"name":"demo-reef-9m.jpg","type":"image/jpeg","size":295976,"status":"ready","text":"Ready","kind":"image","w":1600,"dur":0,"unplayable":false}],"file":"demo-reef-9m.jpg","meta":"1600×1067","busy":"Drawing the demo reef…","toast":"New here? Tap Help for a one-minute tour.","msg":"","transport":false}
+00:16:27.093 cell Video, four seconds, October 20, 11:00 AM
+00:16:44.957 select attempt 1: Done enabled = false
+00:17:01.415 select attempt 2: Done enabled = true
+00:17:09.311 tapped Done
+00:17:10.436 +1s {"kind":"image","cur":"dive_h264.mp4","src":"1600x1067","items":[{"name":"dive_h264.mp4","type":"video/mp4","size":595135,"status":"ready","text":"Ready","kind":"video","w":0,"dur":0,"unplayable":false}],"file":"demo-reef-9m.jpg","meta":"1600×1067","busy":"Drawing the demo reef…","toast":"","msg":"","transport":false}
+00:17:11.505 +2s {"kind":"video","cur":"dive_h264.mp4","src":"1920x1080","items":[{"name":"dive_h264.mp4","type":"video/mp4","size":595135,"status":"ready","text":"Ready","kind":"video","w":1920,"dur":4,"unplayable":false}],"file":"demo-reef-9m.jpg","meta":"1600×1067","busy":"Drawing the demo reef…","toast":"","msg":"","transport":false}
+00:17:14.047 +5s {"kind":"video","cur":"dive_h264.mp4","src":"1920x1080","items":[{"name":"dive_h264.mp4","type":"video/mp4","size":595135,"status":"ready","text":"Ready","kind":"video","w":1920,"dur":4,"unplayable":false}],"file":"dive_h264.mp4","meta":"1920×1080 · 0:04.0 · 30 fps","busy":"Drawing the demo reef…","toast":"","msg":"","transport":true}
+00:17:49.895 debug log:
+00:15:51.580 INFO Reefhue 0fcaae9 Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.2 Mobile/15E148 Safari/604.1 cores 4 memory ? GB WebCodecs true screen 402x874@3
+00:15:52.307 INFO picked demo-reef-9m.jpg type "image/jpeg"
+00:15:52.366 INFO read demo-reef-9m.jpg · JPEG 1600×1067 · 0.3 MB · type "image/jpeg"
+00:17:07.937 INFO picked dive_h264.mp4 type "video/mp4"
+00:17:10.847 INFO video dive_h264.mp4 no frame after a seek (readyState 1 ), trying a muted play
+00:17:10.851 INFO video dive_h264.mp4 no frame after a seek (readyState 1 ), trying a muted play
+00:17:11.038 INFO video dive_h264.mp4 1920×1080 4.0 s ready
+00:17:49.897 === https://reefhue.com/ · IMG_0001.MOV
+00:18:00.159 loaded {"kind":"image","cur":"demo-reef-9m.jpg","src":"1600x1067","items":[{"name":"demo-reef-9m.jpg","type":"image/jpeg","size":295976,"status":"ready","text":"Ready","kind":"image","w":1600,"dur":0,"unplayable":false}],"file":"demo-reef-9m.jpg","meta":"1600×1067","busy":"Drawing the demo reef…","toast":"New here? Tap Help for a one-minute tour.","msg":"","transport":false}
+00:18:25.936 cell Video, four seconds, October 20, 10:00 AM
+00:18:40.593 select attempt 1: Done enabled = false
+00:18:52.969 select attempt 2: Done enabled = true
+00:19:00.815 tapped Done
+00:19:02.328 +2s {"kind":"image","cur":"demo-reef-9m.jpg","src":"1600x1067","items":[{"name":"demo-reef-9m.jpg","type":"image/jpeg","size":295976,"status":"ready","text":"Ready","kind":"image","w":1600,"dur":0,"unplayable":false}],"file":"demo-reef-9m.jpg","meta":"1600×1067","busy":"Drawing the demo reef…","toast":"","msg":"","transport":false}
+00:19:29.895 +29s {"kind":"image","cur":"IMG_0001.mov","src":"1600x1067","items":[{"name":"IMG_0001.mov","type":"video/quicktime","size":7324937,"status":"ready","text":"Ready","kind":"video","w":0,"dur":0,"unplayable":false}],"file":"demo-reef-9m.jpg","meta":"1600×1067","busy":"Drawing the demo reef…","toast":"","msg":"","transport":false}
+00:19:41.959 debug log:
+00:17:54.384 INFO Reefhue 3b520d8 Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.2 Mobile/15E148 Safari/604.1 cores 4 memory ? GB WebCodecs true screen 402x874@3
+00:17:55.243 INFO picked demo-reef-9m.jpg type "image/jpeg"
+00:17:55.291 INFO read demo-reef-9m.jpg · JPEG 1600×1067 · 0.3 MB · type "image/jpeg"
+00:19:29.598 INFO picked IMG_0001.mov type "video/quicktime"
+00:19:43.508 done
