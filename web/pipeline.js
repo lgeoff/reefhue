@@ -70,13 +70,26 @@ export async function pickMp4Encoder(w, h, fps, sourceBps, preferHevc = false) {
   if (hevc && preferHevc) cands.push(mk('hevc', hevc, 0.75));
   if (avc) cands.push(mk('avc', avc, 1.1));
   if (hevc && !preferHevc) cands.push(mk('hevc', hevc, 0.75));
+  // Constant bitrate first: in their default (variable) mode some encoders,
+  // notably Chrome's hardware encoders on Windows, deliver a quarter of the
+  // bitrate asked for, and the picture falls apart. Variable only as fallback.
   for (const c of cands) {
-    try {
-      const r = await VideoEncoder.isConfigSupported(c.config);
-      if (r.supported) return c;
-    } catch { /* next */ }
+    for (const mode of ['constant', 'variable']) {
+      const t = { ...c, config: { ...c.config, bitrateMode: mode } };
+      try {
+        const r = await VideoEncoder.isConfigSupported(t.config);
+        if (r.supported) return t;
+      } catch { /* next */ }
+    }
   }
   return null;
+}
+
+/** What the encoder was asked for and what it delivered, for the debug log. */
+function bitrateInfo(cfg, bytes, seconds, label) {
+  const delivered = seconds > 0 ? (bytes * 8) / seconds : 0;
+  console.info('[reefhue] encoded', label, `${(cfg.bitrate / 1e6).toFixed(1)} Mbit/s asked (${cfg.bitrateMode || 'variable'}),`, `${(delivered / 1e6).toFixed(1)} Mbit/s delivered`);
+  return { bitrate: cfg.bitrate, bitrateMode: cfg.bitrateMode || 'variable', delivered: Math.round(delivered) };
 }
 
 /** Decode the file's audio with Web Audio and encode AAC (or Opus) for MP4. */
@@ -353,10 +366,11 @@ async function exportFast(job) {
   onProgress?.({ frac: 1, text: 'Writing file…' });
   const blob = container === 'mp4' ? writer.finalize() : writer.finalize((n * 1000) / (fps || 30));
   const seconds = (performance.now() - t0) / 1000;
+  const rate = bitrateInfo(encCfg, blob.size, n / (fps || 30), codecLabel);
   return {
     blob, ext: container,
     info: {
-      path: 'fast', render: proc.mode, codec: codecLabel, container, audio: audioLabel, frames: n, seconds, fps: n / seconds, width: ow, height: oh,
+      ...rate, path: 'fast', render: proc.mode, codec: codecLabel, container, audio: audioLabel, frames: n, seconds, fps: n / seconds, width: ow, height: oh,
       msPerFrame: msPer({ ...proc.t, decodeWait, encodeWait: E.waitMs }, n),
     },
   };
@@ -430,10 +444,11 @@ async function exportCompat(job, fps) {
     await E.done();
     const blob = container === 'mp4' ? writer.finalize() : writer.finalize((total * 1000) / fps);
     const seconds = (performance.now() - t0) / 1000;
+    const rate = bitrateInfo(encCfg, blob.size, total / fps, codecLabel);
     return {
       blob, ext: container,
       info: {
-        path: 'compat', render: proc.mode, codec: codecLabel, container, audio: audioLabel, frames: total, seconds, fps: total / seconds, width: ow, height: oh,
+        ...rate, path: 'compat', render: proc.mode, codec: codecLabel, container, audio: audioLabel, frames: total, seconds, fps: total / seconds, width: ow, height: oh,
         msPerFrame: msPer({ seek: seekMs, ...proc.t, encodeWait: E.waitMs }, total),
       },
     };

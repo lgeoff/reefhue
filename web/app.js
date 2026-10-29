@@ -1273,7 +1273,7 @@ function openSheet() {
     $('vidFormat').value = o.format;
     const frames = Math.round((v.duration || item.duration) * (item.fps || st.fps));
     $('vidNote').textContent = fresh
-      ? `Already processed: ${item.result.info.codec}, ${item.result.info.width}×${item.result.info.height}, sound ${item.result.info.audio}.`
+      ? `Already processed: ${item.result.info.codec}, ${item.result.info.width}×${item.result.info.height}${item.result.info.delivered ? `, ${(item.result.info.delivered / 1e6).toFixed(1)} Mbit/s` : ''}, sound ${item.result.info.audio}.`
       : `${frames} frames are restored on this device: decoded with WebCodecs, colour-corrected by the Rust engine${st.gpu ? ' on the GPU' : ''}, then encoded. Keep this tab open while it runs.`;
   } else {
     $('imgFormat').value = /png$/i.test(item.file.type) ? 'png' : 'jpeg';

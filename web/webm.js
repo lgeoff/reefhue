@@ -174,11 +174,14 @@ export async function pickVideoCodec(width, height, fps) {
   if (typeof VideoEncoder === 'undefined') return null;
   const bitrate = Math.round(Math.min(40e6, Math.max(2e6, width * height * fps * 0.14)));
   for (const [codec, id] of [['vp09.00.10.08', 'V_VP9'], ['vp8', 'V_VP8']]) {
-    const config = { codec, width, height, bitrate, framerate: fps, latencyMode: 'quality' };
-    try {
-      const r = await VideoEncoder.isConfigSupported(config);
-      if (r.supported) return { config, matroska: id };
-    } catch { /* try next */ }
+    // constant bitrate first, as for MP4 (some encoders undershoot badly otherwise)
+    for (const bitrateMode of ['constant', 'variable']) {
+      const config = { codec, width, height, bitrate, bitrateMode, framerate: fps, latencyMode: 'quality' };
+      try {
+        const r = await VideoEncoder.isConfigSupported(config);
+        if (r.supported) return { config, matroska: id };
+      } catch { /* try next */ }
+    }
   }
   return null;
 }
