@@ -138,6 +138,9 @@ kbd { font: 600 11px var(--font-body); border: 1px solid var(--line); border-bot
 .drop { border: 2px dashed var(--red); background: rgb(20 21 21 / 0.86); font: 600 28px var(--font-display); text-align: center; }
 .drop small { display: block; font: 400 13px var(--font-body); color: var(--muted); margin-top: 6px; }
 .busy { background: rgb(20 21 21 / 0.6); }
+.busy.indeterminate .meter i { width: 35%; animation: busy-slide 1.2s ease-in-out infinite; }
+@keyframes busy-slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+@media (prefers-reduced-motion: reduce) { .busy.indeterminate .meter i { width: 100%; animation: none; opacity: 0.5; } }
 .busy-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; display: grid; gap: 10px; min-width: min(280px, 80vw); }
 .meter { height: 6px; border-radius: 3px; background: var(--raise); overflow: hidden; }
 .meter i { display: block; height: 100%; width: 0%; background: var(--red); transition: width 0.15s; }

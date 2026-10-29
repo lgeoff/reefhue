@@ -79,12 +79,28 @@ function toast(msg, ms = 4200) {
   clearTimeout(toast.t);
   toast.t = setTimeout(() => { t.hidden = true; }, ms);
 }
+/** Show a message over the preview; without `frac` the bar just moves (no known progress). */
 function busy(text, frac) {
-  $('busy').hidden = text == null;
-  if (text != null) {
-    $('busyText').textContent = text;
-    $('busyBar').style.width = `${Math.round((frac ?? 0) * 100)}%`;
-  }
+  const el = $('busy');
+  el.hidden = text == null;
+  if (text == null) { delete el.dataset.pick; return; }
+  $('busyText').textContent = text;
+  el.classList.toggle('indeterminate', frac == null);
+  $('busyBar').style.width = frac == null ? '' : `${Math.round(frac * 100)}%`;
+}
+
+// Picking files: iOS converts videos (and often photos) before handing them
+// to the page, which can take many seconds with nothing on screen. So a
+// loader goes up as the picker opens (it sits behind the picker) and stays
+// until the files arrive or the picker is cancelled.
+let pickTimer = 0;
+function pickWaiting(on) {
+  clearTimeout(pickTimer);
+  if (on) {
+    busy('Getting your file ready…');
+    $('busy').dataset.pick = '1';
+    pickTimer = setTimeout(() => pickWaiting(false), 120000); // a browser that never reports a cancel
+  } else if ($('busy').dataset.pick) busy(null);
 }
 const once = (el, ev) => new Promise((res) => el.addEventListener(ev, res, { once: true }));
 const timeout = (ms, what) => new Promise((_, rej) => setTimeout(() => rej(new Error(what)), ms));
@@ -649,7 +665,10 @@ function addFiles(list) {
 // giving NotReadableError. So each used input is parked, selection intact,
 // and a fresh one takes its place for the next pick.
 function bindPicker(input) {
+  input.addEventListener('click', () => pickWaiting(true));
+  input.addEventListener('cancel', () => pickWaiting(false));
   input.addEventListener('change', () => {
+    pickWaiting(false);
     if (!input.files.length) return;
     const files = [...input.files];
     takeFiles(files); // first, before anything else touches them
@@ -927,10 +946,15 @@ async function selectItem(item) {
     if (!item.repick) toast(`Could not open ${item.name}: ${message}${details ? `\nDetails: ${details}` : ''}`, 15000);
   };
   if (item.unplayable) { showError(item.stateText, item.errorDetails); return; }
+  // opening can take a few seconds (big photos, HEIC, iOS videos): say so, unless it's quick
+  const opening = setTimeout(() => { if (st.cur === item && $('busy').hidden) busy(`Opening ${item.name}…`); }, 200);
+  const doneOpening = () => { clearTimeout(opening); if (/^Opening /.test($('busyText').textContent) && !$('busy').hidden) busy(null); };
   try {
     if (item.kind === 'video') await loadVideo(item);
     else await loadImage(item);
+    doneOpening();
   } catch (err) {
+    doneOpening();
     if (!item.repick) console.error(err);
     if (st.cur !== item) return;
     if (item.kind === 'image') {
@@ -1411,6 +1435,7 @@ function bindDebug() {
 
 // ------------------------------------------------------------- wiring
 function bindInputs() {
+  $('busy').addEventListener('pointerdown', () => pickWaiting(false));
   // Android keeps MIME types only (that's what lets Chrome use its photo
   // picker); desktop file dialogs also need the extensions they don't map.
   if (!/Android/i.test(navigator.userAgent)) {
