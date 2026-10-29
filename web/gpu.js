@@ -25,6 +25,8 @@ uniform float uKRed, uWg, uKBlue, uVref, uVeil;
 uniform float uClarity, uStrength, uSat, uVib, uWSat, uWLum, uWHue;
 uniform mat3 uHue;
 uniform vec2 uGridSize;
+uniform int uField;        // interlaced source: field to keep (0 even lines, 1 odd), -1 progressive
+uniform vec2 uSrcSize;
 in vec2 vUv;
 out vec4 outColor;
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
@@ -52,8 +54,26 @@ float grid(vec2 uv) {
   float b = mix(texelFetch(uGrid, ivec2(p0.x, p1.y), 0).r, texelFetch(uGrid, p1, 0).r, t.x);
   return mix(a, b, t.y);
 }
+// Deinterlacing, as engine/src/deint.rs: a line of the other field keeps its
+// pixel where it lies between the lines above and below, and takes their
+// average where it sticks out from both (motion combing).
+vec3 srcLine(float x, float l) {
+  return texture(uSrc, vec2(x, (clamp(l, 0.0, uSrcSize.y - 1.0) + 0.5) / uSrcSize.y)).rgb;
+}
+vec3 source(vec2 uv) {
+  if (uField < 0) return texture(uSrc, uv).rgb;
+  float l = floor(uv.y * uSrcSize.y);
+  vec3 b = srcLine(uv.x, l);
+  if (int(mod(l, 2.0)) == uField) return b;
+  float la = l - 1.0 < 0.0 ? l + 1.0 : l - 1.0;
+  float lc = l + 1.0 > uSrcSize.y - 1.0 ? l - 1.0 : l + 1.0;
+  vec3 a = srcLine(uv.x, la), c = srcLine(uv.x, lc);
+  vec3 W = vec3(77.0, 150.0, 29.0) / 256.0 * 255.0;
+  float ya = dot(a, W), yb = dot(b, W), yc = dot(c, W);
+  return (yb - ya) * (yb - yc) > 100.0 ? (a + c) * 0.5 : b;
+}
 void main() {
-  vec3 c0 = texture(uSrc, vUv).rgb;
+  vec3 c0 = source(vUv);
   float r2 = c0.r + uKRed * (1.0 - c0.r) * donor(c0.g, c0.b);
   float b2 = c0.b + uKBlue * (1.0 - c0.b) * c0.g;
   vec3 c = vec3(r2, c0.g, b2) * uM + uO;
@@ -116,7 +136,7 @@ export class GpuRenderer {
     gl.useProgram(p);
     this.u = {};
     for (const n of ['uSrc', 'uTone', 'uGrid', 'uM', 'uO', 'uKRed', 'uWg', 'uKBlue', 'uVref', 'uVeil', 'uClarity',
-      'uStrength', 'uSat', 'uVib', 'uWSat', 'uWLum', 'uWHue', 'uHue', 'uGridSize']) this.u[n] = gl.getUniformLocation(p, n);
+      'uStrength', 'uSat', 'uVib', 'uWSat', 'uWLum', 'uWHue', 'uHue', 'uGridSize', 'uField', 'uSrcSize']) this.u[n] = gl.getUniformLocation(p, n);
     gl.uniform1i(this.u.uSrc, 0);
     gl.uniform1i(this.u.uTone, 1);
     gl.uniform1i(this.u.uGrid, 2);
@@ -144,8 +164,9 @@ export class GpuRenderer {
    * Render `source` (VideoFrame, ImageBitmap, canvas, video or ImageData) at
    * w×h with the constants from engine.gpuFrame(). The result stays in
    * this.canvas, ready for `new VideoFrame(renderer.canvas, ...)`.
+   * `field` (0 or 1) deinterlaces an interlaced source of srcW×srcH.
    */
-  render(source, w, h, frame) {
+  render(source, w, h, frame, field = -1, srcW = 0, srcH = 0) {
     const gl = this.gl;
     if (this.canvas.width !== w || this.canvas.height !== h) {
       this.canvas.width = w;
@@ -178,6 +199,8 @@ export class GpuRenderer {
     gl.uniform2f(u.uGridSize, frame.gw, frame.gh);
     gl.uniform1f(u.uWHue, P[27]);
     gl.uniform1f(u.uVeil, P[28]);
+    gl.uniform1i(u.uField, field);
+    gl.uniform2f(u.uSrcSize, srcW || w, srcH || h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 

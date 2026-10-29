@@ -3,7 +3,7 @@
 // evaluate the per-pixel formula on the GPU when available (gpu.js).
 import { Engine, buildSettings, smoothAuto, PRESETS, DEFAULTS, S } from './engine.js';
 import { GpuRenderer } from './gpu.js';
-import { exportVideo, exportImage, thumbSize } from './pipeline.js';
+import { exportVideo, exportImage, thumbSize, avcInterlaced } from './pipeline.js';
 import { openMp4 } from './mp4.js';
 import { makeZip } from './zip.js';
 import { loadPhotoFile, decodePhoto, describe } from './image.js';
@@ -303,8 +303,20 @@ function layoutPreview() {
   st.out = new ImageData(st.pw, st.ph);
 }
 
+// interlaced video: deinterlace at full size (keeping the first field), then scale
+let fieldC = null, fieldG = null;
 function grab(source) {
-  workCtx.drawImage(source, 0, 0, st.pw, st.ph);
+  if (st.kind === 'video' && st.cur?.interlaced && st.srcW && st.eng) {
+    if (!fieldC || fieldC.width !== st.srcW || fieldC.height !== st.srcH) {
+      fieldC = new OffscreenCanvas(st.srcW, st.srcH);
+      fieldG = fieldC.getContext('2d', { willReadFrequently: true });
+    }
+    fieldG.drawImage(source, 0, 0, st.srcW, st.srcH);
+    const full = fieldG.getImageData(0, 0, st.srcW, st.srcH);
+    st.eng.deinterlace(full.data, st.srcW, st.srcH, 0);
+    fieldG.putImageData(full, 0, 0);
+    workCtx.drawImage(fieldC, 0, 0, st.pw, st.ph);
+  } else workCtx.drawImage(source, 0, 0, st.pw, st.ph);
   st.src = workCtx.getImageData(0, 0, st.pw, st.ph);
   beforeCtx.putImageData(st.src, 0, 0);
   thumbCtx.drawImage(source, 0, 0, st.tw, st.th);
@@ -970,7 +982,7 @@ async function selectItem(item) {
 function setFileLabel() {
   const item = st.cur;
   $('fileName').textContent = item.name;
-  const extra = (st.kind === 'video' ? ` · ${fmtTime(v.duration)} · ${(+st.fps).toFixed(st.fps % 1 ? 2 : 0)} fps` : '') + (item.note ? ` · ${item.note}` : '');
+  const extra = (st.kind === 'video' ? ` · ${fmtTime(v.duration)} · ${(+st.fps).toFixed(st.fps % 1 ? 2 : 0)} fps${item.interlaced ? ' interlaced' : ''}` : '') + (item.note ? ` · ${item.note}` : '');
   const w = st.kind === 'image' && item.w ? item.w : st.srcW, h = st.kind === 'image' && item.h ? item.h : st.srcH;
   $('fileMeta').textContent = `${w}×${h}${extra}`;
   syncDownload();
@@ -1038,9 +1050,13 @@ async function loadVideo(item) {
   }
   st.kind = 'video'; st.bitmap = null;
   st.srcW = v.videoWidth; st.srcH = v.videoHeight; st.smooth = null;
-  if (!item.fps) {
+  if (!item.fps || item.interlaced == null) {
     // exact rate from the MP4/MOV index when there is one; playback estimate otherwise
-    try { const d = await openMp4(item.file); if (d.video) item.fps = trackFps(d.video); } catch { /* not MP4 */ }
+    try {
+      const d = await openMp4(item.file);
+      if (d.video) { item.fps ||= trackFps(d.video); item.interlaced = avcInterlaced(d.video); }
+    } catch { /* not MP4 */ }
+    if (item.interlaced) console.info('video', item.name, 'is interlaced: deinterlaced in the preview and the export');
   }
   st.fps = item.fps || (item.fps = await estimateFps());
   await seekTo(0);
@@ -1274,7 +1290,7 @@ function openSheet() {
     const frames = Math.round((v.duration || item.duration) * (item.fps || st.fps));
     $('vidNote').textContent = fresh
       ? `Already processed: ${item.result.info.codec}, ${item.result.info.width}×${item.result.info.height}${item.result.info.delivered ? `, ${(item.result.info.delivered / 1e6).toFixed(1)} Mbit/s` : ''}, sound ${item.result.info.audio}.`
-      : `${frames} frames are restored on this device: decoded with WebCodecs, colour-corrected by the Rust engine${st.gpu ? ' on the GPU' : ''}, then encoded. Keep this tab open while it runs.`;
+      : `${item.interlaced ? `Interlaced video: each half-frame becomes a frame of its own, so it is exported at up to ${Math.round((item.fps || st.fps) * 2)} frames per second for smooth motion. ` : ''}${frames} frames are restored on this device: decoded with WebCodecs, colour-corrected by the Rust engine${st.gpu ? ' on the GPU' : ''}, then encoded. Keep this tab open while it runs.`;
   } else {
     $('imgFormat').value = /png$/i.test(item.file.type) ? 'png' : 'jpeg';
     $('imgNote').textContent = `Full resolution, ${item.w || st.srcW}×${item.h || st.srcH} px. Processed locally; the file never leaves this device. Camera metadata (EXIF) is not copied.`;

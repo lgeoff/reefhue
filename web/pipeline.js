@@ -11,6 +11,7 @@
 
 import { buildSettings, smoothAuto } from './engine.js';
 import { openMp4, SampleReader, Mp4Writer, mp4aEntry, opusEntry } from './mp4.js';
+import { parseSps } from './ts.js';
 import { WebMWriter, pickVideoCodec, encodeAudioTrack } from './webm.js';
 import { loadPhotoFile, decodeForExport } from './image.js';
 import { getPool } from './pool.js';
@@ -83,6 +84,22 @@ export async function pickMp4Encoder(w, h, fps, sourceBps, preferHevc = false) {
     }
   }
   return null;
+}
+
+/** Does this H.264 track's sequence header allow interlaced (field) coding? */
+export function avcInterlaced(vt) {
+  const d = vt?.family === 'avc' ? vt.description : null;
+  if (!d || d.length < 9 || !(d[5] & 31)) return false;
+  const len = (d[6] << 8) | d[7];
+  try { return parseSps(d.subarray(8, 8 + len)).interlaced; } catch { return false; }
+}
+
+/** Share of pixels that comb in a decoded frame. */
+function combOf(eng, frame, w, h) {
+  const c = new OffscreenCanvas(w, h);
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(frame, 0, 0, w, h);
+  return eng.combScore(g.getImageData(0, 0, w, h).data, w, h);
 }
 
 /** What the encoder was asked for and what it delivered, for the debug log. */
@@ -161,6 +178,8 @@ class FrameProcessor {
     this.thumbG = this.thumbC.getContext('2d', { willReadFrequently: true });
     this.outW = outW;
     this.outH = outH;
+    this.srcW = srcW;
+    this.srcH = srcH;
     if (!this.gpu) {
       this.cpuC = new OffscreenCanvas(outW, outH);
       this.cpuG = this.cpuC.getContext('2d', { willReadFrequently: true });
@@ -171,8 +190,12 @@ class FrameProcessor {
 
   get mode() { return this.gpu ? 'gpu' : 'cpu'; }
 
-  /** Process one source (VideoFrame / video element) at time t; returns a new VideoFrame. */
-  frame(src, t, timestamp, duration) {
+  /**
+   * Process one source (VideoFrame / video element) at time t; returns a new
+   * VideoFrame. `field` (0 or 1) deinterlaces an interlaced source, keeping
+   * that field.
+   */
+  frame(src, t, timestamp, duration, field = -1) {
     const { eng, user, tw, th } = this;
     const T = this.t;
     let t0 = performance.now();
@@ -188,10 +211,19 @@ class FrameProcessor {
     let out;
     if (this.gpu) {
       const fd = eng.gpuFrame(settings, thumb, tw, th);
-      this.gpu.render(src, this.outW, this.outH, fd);
+      this.gpu.render(src, this.outW, this.outH, fd, field, this.srcW, this.srcH);
       out = new VideoFrame(this.gpu.canvas, { timestamp, duration });
     } else {
-      this.cpuG.drawImage(src, 0, 0, this.outW, this.outH);
+      if (field >= 0) {
+        // deinterlace at the source's own line count, then scale
+        this.fieldC ||= new OffscreenCanvas(this.srcW, this.srcH);
+        this.fieldG ||= this.fieldC.getContext('2d', { willReadFrequently: true });
+        this.fieldG.drawImage(src, 0, 0, this.srcW, this.srcH);
+        const full = this.fieldG.getImageData(0, 0, this.srcW, this.srcH);
+        eng.deinterlace(full.data, this.srcW, this.srcH, field);
+        this.fieldG.putImageData(full, 0, 0);
+        this.cpuG.drawImage(this.fieldC, 0, 0, this.outW, this.outH);
+      } else this.cpuG.drawImage(src, 0, 0, this.outW, this.outH);
       const img = this.cpuG.getImageData(0, 0, this.outW, this.outH);
       eng.process(img.data, this.outW, this.outH, settings, img.data, thumb, tw, th);
       this.cpuG.putImageData(img, 0, 0);
@@ -248,10 +280,55 @@ async function exportFast(job) {
 
   const S = vt.samples, ts = vt.timescale;
   const fps = Math.round((S.count / Math.max(vt.duration, 1e-3)) * 100) / 100;
+  const frames = [];
+  let decErr = null, wake = null, decodeDone = false;
+  const dec = new VideoDecoder({
+    output: (f) => { frames.push(f); wake?.(); },
+    error: (e) => { decErr = e; wake?.(); },
+  });
+  dec.configure(decCfg);
+  const reader = new SampleReader(file, vt);
+  let next = 0;
+  const mt = vt.mediaTime;
+  const feed = async () => {
+    while (next < S.count && dec.decodeQueueSize + frames.length < 6) {
+      const data = await reader.read(next);
+      const cts = S.dts[next] + S.cto[next] - mt;
+      dec.decode(new EncodedVideoChunk({
+        type: !S.key || S.key[next] ? 'key' : 'delta',
+        timestamp: Math.round((cts * 1e6) / ts),
+        duration: Math.round((S.dur[next] * 1e6) / ts),
+        data,
+      }));
+      next++;
+    }
+    if (next >= S.count && !feed.flushing) {
+      feed.flushing = true;
+      dec.flush().then(() => { decodeDone = true; wake?.(); }, (e) => { decErr = decErr || e; wake?.(); });
+    }
+  };
+
+  // Interlaced video (1080i camcorders): look at the first frames. If they
+  // really comb (motion between the two fields), each field becomes a frame
+  // of its own: 25 interlaced frames a second become 50 full ones. A
+  // progressive picture in an interlaced stream (25p "PsF") is left as is.
+  let bob = false;
+  if (avcInterlaced(vt)) {
+    const tp = performance.now();
+    while (frames.length < 5 && !decodeDone && !decErr && performance.now() - tp < 15000) {
+      await feed();
+      if (frames.length < 5) { await new Promise((r) => { wake = r; setTimeout(r, 25); }); wake = null; }
+    }
+    const scores = frames.filter((f) => f.timestamp >= 0).slice(0, 5).map((f) => combOf(eng, f, f.displayWidth, f.displayHeight)).sort((a, b) => a - b);
+    const comb = scores.length ? scores[scores.length >> 1] : 0;
+    bob = comb > 0.008; // progressive video: ~0.002, interlaced with motion: 0.02 and up
+    console.info('[reefhue] interlaced stream, comb', comb.toFixed(3), bob ? `→ deinterlaced, ${fps * 2} frames per second` : '→ progressive picture, left as is');
+  }
+  const outFps = bob ? fps * 2 : fps;
   const [ow, oh] = outputSize(vt.codedWidth, vt.codedHeight, opts.maxShort);
   const srcBps = (vt.bytes * 8) / Math.max(vt.duration, 1e-3);
   const wantMp4 = opts.format !== 'webm';
-  const mp4enc = wantMp4 ? await pickMp4Encoder(ow, oh, fps, srcBps * (ow * oh) / (vt.codedWidth * vt.codedHeight), vt.family === 'hevc') : null;
+  const mp4enc = wantMp4 ? await pickMp4Encoder(ow, oh, outFps, srcBps * (ow * oh) / (vt.codedWidth * vt.codedHeight), vt.family === 'hevc') : null;
   let writer, encCfg, container, codecLabel;
   if (mp4enc) {
     encCfg = mp4enc.config;
@@ -263,8 +340,8 @@ async function exportFast(job) {
       displayHeight: vt.displayHeight ? (vt.displayHeight * oh) / vt.codedHeight : oh,
     });
   } else {
-    const pick = await pickVideoCodec(ow, oh, fps);
-    if (!pick) throw new Error('This browser cannot encode video.');
+    const pick = await pickVideoCodec(ow, oh, outFps);
+    if (!pick) { for (const f of frames) f.close(); dec.close(); throw new Error('This browser cannot encode video.'); }
     encCfg = pick.config;
     container = 'webm';
     codecLabel = pick.matroska === 'V_VP9' ? 'VP9' : 'VP8';
@@ -300,35 +377,8 @@ async function exportFast(job) {
   const E = makeEncoder((chunk, meta) => (container === 'mp4' ? writer.addVideo(chunk, meta) : writer.addVideo(chunk)));
   E.enc.configure(encCfg);
 
-  const frames = [];
-  let decErr = null, wake = null, decodeDone = false;
-  const dec = new VideoDecoder({
-    output: (f) => { frames.push(f); wake?.(); },
-    error: (e) => { decErr = e; wake?.(); },
-  });
-  dec.configure(decCfg);
-  const reader = new SampleReader(file, vt);
-  let next = 0;
-  const mt = vt.mediaTime;
-  const feed = async () => {
-    while (next < S.count && dec.decodeQueueSize + frames.length < 6) {
-      const data = await reader.read(next);
-      const cts = S.dts[next] + S.cto[next] - mt;
-      dec.decode(new EncodedVideoChunk({
-        type: !S.key || S.key[next] ? 'key' : 'delta',
-        timestamp: Math.round((cts * 1e6) / ts),
-        duration: Math.round((S.dur[next] * 1e6) / ts),
-        data,
-      }));
-      next++;
-    }
-    if (next >= S.count && !feed.flushing) {
-      feed.flushing = true;
-      dec.flush().then(() => { decodeDone = true; wake?.(); }, (e) => { decErr = decErr || e; wake?.(); });
-    }
-  };
-  const total = S.count;
-  const keyEvery = Math.max(1, Math.round(fps * 2));
+  const total = S.count * (bob ? 2 : 1);
+  const keyEvery = Math.max(1, Math.round(outFps * 2));
   const t0 = performance.now();
   let n = 0, decodeWait = 0;
   const frameDur = Math.round(1e6 / (fps || 30));
@@ -346,10 +396,24 @@ async function exportFast(job) {
       }
       const f = frames.shift();
       if (f.timestamp < 0) { f.close(); continue; }
-      let out;
-      try { out = proc.frame(f, f.timestamp / 1e6, f.timestamp, f.duration ?? frameDur); } finally { f.close(); }
-      await E.push(out, n % keyEvery === 0);
-      n++;
+      if (bob) {
+        // top field first (1080i), each field half a frame apart
+        const half = Math.round((f.duration ?? frameDur) / 2);
+        let a, b;
+        try {
+          a = proc.frame(f, f.timestamp / 1e6, f.timestamp, half, 0);
+          b = proc.frame(f, (f.timestamp + half) / 1e6, f.timestamp + half, half, 1);
+        } catch (e) { a?.close(); throw e; } finally { f.close(); }
+        await E.push(a, n % keyEvery === 0);
+        n++;
+        await E.push(b, n % keyEvery === 0);
+        n++;
+      } else {
+        let out;
+        try { out = proc.frame(f, f.timestamp / 1e6, f.timestamp, f.duration ?? frameDur); } finally { f.close(); }
+        await E.push(out, n % keyEvery === 0);
+        n++;
+      }
       if (n % 4 === 0 || n === total) {
         const el = (performance.now() - t0) / 1000;
         onProgress?.({ frac: Math.min(1, n / total), fps: n / el, eta: ((total - n) * el) / n, text: `Frame ${n} of ${total}` });
@@ -364,13 +428,13 @@ async function exportFast(job) {
   }
   try { dec.close(); } catch { /* closed */ }
   onProgress?.({ frac: 1, text: 'Writing file…' });
-  const blob = container === 'mp4' ? writer.finalize() : writer.finalize((n * 1000) / (fps || 30));
+  const blob = container === 'mp4' ? writer.finalize() : writer.finalize((n * 1000) / (outFps || 30));
   const seconds = (performance.now() - t0) / 1000;
-  const rate = bitrateInfo(encCfg, blob.size, n / (fps || 30), codecLabel);
+  const rate = bitrateInfo(encCfg, blob.size, n / (outFps || 30), codecLabel);
   return {
     blob, ext: container,
     info: {
-      ...rate, path: 'fast', render: proc.mode, codec: codecLabel, container, audio: audioLabel, frames: n, seconds, fps: n / seconds, width: ow, height: oh,
+      ...rate, deinterlaced: bob, outFps, path: 'fast', render: proc.mode, codec: codecLabel, container, audio: audioLabel, frames: n, seconds, fps: n / seconds, width: ow, height: oh,
       msPerFrame: msPer({ ...proc.t, decodeWait, encodeWait: E.waitMs }, n),
     },
   };

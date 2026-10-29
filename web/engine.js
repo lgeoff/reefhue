@@ -120,6 +120,24 @@ export class Engine {
     return { params, tone: f.slice(tp, tp + TONE_N), grid: f.slice(gp, gp + gw * gh), gw, gh };
   }
 
+  // ------------------------------------------------------- interlacing
+
+  /** Keep field 0 (even lines) or 1 (odd lines) and rebuild the other where it combs. In place. */
+  deinterlace(rgba, w, h, field, t = 10) {
+    this._reserve(rgba.length);
+    this.u8.set(rgba, this.pA);
+    this.x.deinterlace(this.pA, w, h, field, t);
+    rgba.set(this.u8.subarray(this.pA, this.pA + rgba.length));
+    return rgba;
+  }
+
+  /** Share of pixels that comb (high for interlaced video with motion). */
+  combScore(rgba, w, h, t = 10) {
+    this._reserve(rgba.length);
+    this.u8.set(rgba, this.pA);
+    return this.x.comb_score(this.pA, w, h, t);
+  }
+
   // ------------------------------------------------------- backscatter
 
   /** Scratch memory after the two image buffers. */
